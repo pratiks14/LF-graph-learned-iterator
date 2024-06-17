@@ -1,0 +1,17 @@
+.vscode
+
+log/**/*
+!log/.gitkeep
+
+**/*.out
+
+output/**/*
+!output/.gitkeep
+
+**/*.txt
+
+script_log/**/*
+!script_log/.gitkeep
+
+temp_output
+test_codes

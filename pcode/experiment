@@ -1,0 +1,1 @@
+All implementations are in C++ without garbage collection. We used Posix threads for multi-threaded implementation. We initially populate the graph with a fixed set of nodes and edges. 
