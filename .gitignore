@@ -9,6 +9,7 @@ log/**/*
 
 output/**/*
 !output/.gitkeep
+!output/*/.gitkeep
 
 **/*.txt
 
