@@ -20,7 +20,7 @@ algos = [  "report_resp" , "Learned-graph"  ]
 
 debug = False
 main_file = "main.cpp"
-iterations = 1
+iterations = 6
 test_duration = "10" #no of sec before stop executions
 init_vertices_map = { 
     6000 : "../input/datasets/p2p-Gnutella06",
