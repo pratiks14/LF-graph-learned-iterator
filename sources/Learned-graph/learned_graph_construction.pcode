@@ -31,19 +31,25 @@ int addLL(lln , aimodel_status,&local_tail , &find_key)
         while (is_marked_ref((long)curr_n->value->vnext))
             curr_n = get_unmarked_unfreez(curr_n ->next)
         if curr_n->key > find_key :
-            new SnapVnode(node)
-            tmp_head = aimodel_status.head;
-            if tmp_head == nullptr
+            node = new SnapVnode()
+            tmp_head = nullptr;
+            if local_tail == nullptr
             {
-                cas(aimodel_status.head , tmp_head , node);
+                head_up = cas(aimodel_status.head , tmp_head , node);
             }
             //while loop is required as it moves on to the next node and there is a possibility that the node is not added to the list
             while(find_key < node->key) //means the node is not updated in prev if condition
             {
                 if (local_tail != nullptr)
                     ret = cas(local_tail->next , snap_End_Vnode , node);
-                if ret or local_tail=null
-                    cas(aimodel_status.tail , local_tail , node);
+                    if ret : 
+                        cas(aim_stat->tail , local_tail , node)
+                else
+                    if head_up:
+                        cas(aim_stat->tail, nullptr , node)
+                    else
+                        cas(aim_stat->tail , nullptr , tmp_head)
+                
                 ret = update_local_tail(aimodel_status , local_tail , find_ke,local_tail , find_key)#helping
                 if ret == -1
                     return -1
@@ -58,7 +64,7 @@ func process_mobs(mobs_lf, aimodel_status,&local_tail, &find_key){
             Node current_root = unmarked(mobs->mob.lflb->root)
             if current_root.isinternal(){
                 int cnt = current_root->count
-                for i in cnt-1){
+                for i in cnt-1{
                     if current_root->key < find_key
                         continue
                     //process the linked list of leaf nodes
@@ -113,19 +119,26 @@ func process_mobs(mobs_lf, aimodel_status,&local_tail, &find_key){
             //add the node
             if(node->vnext is not marked and node-> key > find_key)
             {
-                new SnapVnode(node)
+                node = new SnapVnode()
                 tmp_head = aimodel_status.head;
+                head_up = false
                 if tmp_head == nullptr
                 {
-                    cas(aimodel_status.head , tmp_head , node);
+                    head_up = cas(aimodel_status.head , tmp_head , node);
                 }
                 //while loop is required as it moves on to the next node and there is a possibility that the node is not added to the list
                 while(find_key < node->key) //means the node is not updated in prev if condition
                 {
                     if (local_tail != nullptr)
                         ret = cas(local_tail->next , snap_End_Vnode , node);
-                    if ret or local_tail=null
-                        cas(aimodel_status.tail , local_tail , node);
+                        if ret :
+                            cas(aim_stat->tail , local_tail , node)
+                    else local_tail=null
+                        if head_up
+                            cas(aimodel_status.tail , null , node);
+                        else
+                            cas(aimodel_status.tail , null , tmp_head)
+
                     ret = update_local_tail(aimodel_status , local_tail , find_ke,local_tail , find_key)
                     if ret == -1
                         return -1
@@ -144,10 +157,11 @@ func process_mobs(mobs_lf, aimodel_status,&local_tail, &find_key){
         
         //end of kanvamodel
         if(isfirst)
-            tmp = snap_End_Vnode;
-            while(cas(local_tail->next ,tmp  , marked(snap_End_Vnode)))
-                local_tail = tmp;
+            local_tail = aim_stat->tail
+            if local_tail != nullptr #all nodes are marked for this particular ai model
                 tmp = snap_End_Vnode;
+                while(cas(local_tail->next ,snap_End_Vnode  , marked(snap_End_Vnode)))
+                    local_tail = tmp;
 
             cas(aimodel_status.status , 1, 2);
             
@@ -173,9 +187,12 @@ for i,aimodel in kanva.aimodels{
 
 2nd iteration
 for i,aimodel in kanva.aimodels{
-    local_tail = nullptr    
-    find_key = 0
+
+    
     if(aimodel_status[i].status != 2){
+        local_tail = aimodel_status[i]->tail    
+        if local_tail!= null
+            find_key = local_tail->val
         cas(aimodel_status[i].status , 0,1);
         kanva_model_iterator(aimodel , aimodel_status[i],local_tail , find_key,true)
     } 
