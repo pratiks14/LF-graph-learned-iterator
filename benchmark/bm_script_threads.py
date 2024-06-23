@@ -18,15 +18,15 @@ algos = [  "report_resp" , "Learned-graph"  ]
 #algos = ["report_BC_tt_ss_update"]
 debug = False
 main_file = "main.cpp"
-iterations = 2
+iterations = 1
 test_duration = "10" #no of sec before stop executions
 init_vertices = str(10**4)
 init_edges = str(2 * (10**4))
 
 
 #files
-maxt_output_file_fmt = '../output/{0}_op_' + date_time_obj +"_maxt_{1}" +  '.csv'
-avgt_output_file_fmt = '../output/{0}_op_' + date_time_obj +"_avgt_{1}" + '.csv'
+maxt_output_file_fmt = '../output/threads/{0}_op_' + date_time_obj +"_maxt_{1}" +  '.csv'
+avgt_output_file_fmt = '../output/threads/{0}_op_' + date_time_obj +"_avgt_{1}" + '.csv'
 script_log_file = "../script_log/" + date_time_obj + ".txt"
 input_file = "../input/datasets/synth_10k_20k"
 
@@ -53,8 +53,8 @@ with open(script_log_file, 'w+') as log_f_object:
         print("\n\n\n\n\n\nProbablity Dist: "+ key +" " + str( dist_probs[key])  ,file = log_f_object,flush = True)
         
         #for i in range(2,11,2):
-        for i in range(0,1,1): #will run for 0 snapshot
-        #for i in [2,6,10]:
+        #for i in range(0,1,1): #will run for 0 snapshot
+        for i in [2,6,10]:
             dist_prob = dist_probs[key].copy()
             print("\n\nSnapshot Dist: "+str(i)  ,file = log_f_object,flush = True)
             if(i != 0):

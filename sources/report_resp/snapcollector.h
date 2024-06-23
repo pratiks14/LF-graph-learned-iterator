@@ -276,8 +276,9 @@ class SnapCollector{
             this->activate();
 
             reports = new Report*[no_of_threads];
-            for( int i ; i < no_of_threads ;i++){
+            for( int i =0; i < no_of_threads ;i++){
                 reports[i] = new Report();
+                
             }
             //++threads_accessing;
             

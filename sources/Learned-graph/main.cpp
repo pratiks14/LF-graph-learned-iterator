@@ -298,7 +298,7 @@ void *thread_funct(void * t_args){
             {
                 chrono::high_resolution_clock::time_point startT = chrono::high_resolution_clock::now();
                 //print_graph(&logfile_th , graph->head);
-                SnapCollector *sc = takeSnapshot(graph, 10, &logfile_th, debug, thread_num);
+                SnapCollector *sc = takeSnapshot(graph, max_threads, &logfile_th, debug, thread_num);
 
 //                cout <<"Thread id : " << thread_num << " Snap taken " << endl;
                 chrono::high_resolution_clock::time_point endT = chrono::high_resolution_clock::now();
@@ -482,6 +482,8 @@ void read_from_file(string file , vector<val_type> &vertices , vector<pair<key_t
     int curr_size = 0;
     for(j=1; j<=m; j = j+1){
 	    cinn>>u>>v;
+        u = u++;
+        v = v++;
         if(u <= 0 or v <= 0){
             continue;
         }

@@ -303,7 +303,7 @@ class SnapCollector{
             this->activate();
 
             reports = new Report*[no_of_threads];
-            for( int i ; i < no_of_threads ;i++){
+            for( int i = 0 ; i < no_of_threads ;i++){
                 reports[i] = new Report();
             }
             //++threads_accessing;
@@ -1517,8 +1517,8 @@ void reportVertex(Vnode<val_type> *victim,int tid, int action, fstream *logfile,
         if(action == 2 && is_marked_ref((long) victim->vnext.load()))
             return;
         
-        
-        VertexReport *vreport_head = SC->reports[tid]->head_vertex_report;
+        Report *tmp_rep = SC->reports[tid];
+        VertexReport *vreport_head = tmp_rep->head_vertex_report;
         VertexReport *rep = new VertexReport(victim, action, vreport_head);
         
         if (vreport_head != nullptr && vreport_head->action == 3){
