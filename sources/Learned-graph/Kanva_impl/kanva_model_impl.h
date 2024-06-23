@@ -216,24 +216,7 @@ Vnode<val_type>* KanvaModel<key_type, Vnode<val_type>*>::find_retrain(const key_
 
 
 
-template<>
-Vnode<val_type>* KanvaModel<key_type, Vnode<val_type>*>::find_retrain_help(const key_type &key, Vnode<val_type>* &val)
-{
-    size_t pos = predict(key);
-    pos = locate_in_levelbin(key, pos);
-    if(key == keys[pos]){
-        return vals[pos];
-    }
-    int bin_pos = key<keys[pos]?pos:(pos+1);
-struct model_or_bin<key_type, Vnode<val_type>*>* mob;
-    mob = mobs_lf[bin_pos].load(std::memory_order_seq_cst);
 
-    if(mob==nullptr) return nullptr;
-    if(mob-> isbin)
-        return mob->mob.lflb->search_help(key);
-    else
-        return mob->mob.ai->find_retrain_help(key, val);
-}
 
 
 template<class key_t, class val_t>
@@ -277,10 +260,7 @@ bool KanvaModel<key_type, Vnode<val_type>*>::insert_retrain(const key_type &key,
         {
             //update the value
             Vnode<val_type>* temp = vals[pos];
-            if(!vals[pos].compare_exchange_strong(temp, val))
-            {
-                delete temp;
-            }
+            vals[pos].compare_exchange_strong(temp, val);
             return true;
         }
     }
@@ -356,7 +336,8 @@ bool KanvaModel<key_type , Vnode<val_type>*>::remove(const key_type &key)
     if (key == keys[pos]) {
         //mark the vnect of node
         Vnode<val_type>* vnode = vals[pos].load();
-        if(!vnode->vnext.compare_exchange_strong(end_Vnode_T, (Vnode<val_type>*)set_mark((long) end_Vnode_T)))
+        Vnode<val_type > *tmp = end_Vnode_T;
+        if(!vnode->vnext.compare_exchange_strong(tmp, (Vnode<val_type>*)set_mark((long) end_Vnode_T)))
             return false;
         return true;
     }
@@ -388,6 +369,7 @@ bool KanvaModel<key_t, val_t>::remove_model_or_bin(const key_t &key, const int b
             new_mob -> mob.ai = ai;
             new_mob->isbin = false;
             if(!mobs_lf[bin_pos].compare_exchange_strong(mob, new_mob)) {
+                delete new_mob;
                 goto retry;
             }
             return ai->remove(key);

@@ -30,7 +30,6 @@ public:
     Node<K, V> *remove_internal(K key, Internal_Node<K, V> *current_root);
 
     V search(K key);
-    V search_help(K key);
 
     int range_query(K key, int remaining, std::vector<std::pair<K, V>> &result) {
         int n = remaining;
@@ -65,16 +64,6 @@ V Bin<K,V>::search(K key) {
     return node->ptr[ptr_idx]->data_array_list.search(key);
 }
 
-template<typename K, typename V>
-V Bin<K,V>::search_help(K key) {
-    Node<K,V>* curr_root = (Node<K,V>*)unset_mark((long) root.load(std::memory_order_seq_cst));
-    if(curr_root -> is_leaf)
-        return ((leaf_node<K,V>*) curr_root) -> data_array_list.search_help(key);
-    Internal_Node<K,V>* node = (Internal_Node<K,V>*) curr_root;
-    int ptr_idx = std::lower_bound(node->key.begin(), node->key.begin() + node->count, key) -
-                  node->key.begin();
-    return node->ptr[ptr_idx]->data_array_list.search_help(key);
-}
 
 template<typename K, typename V>
 bool Bin<K,V>::remove(K key) {
