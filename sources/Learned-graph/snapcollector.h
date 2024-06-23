@@ -354,13 +354,8 @@ class SnapCollector{
             {
                 Snap_Vnode * prev = local_tail;
                 local_tail = prev->vnext.load();
-                bool resp = aim_stat->tail.compare_exchange_strong(prev, local_tail);
-                /////////
-                if(resp  and debug)
-                {
-                    (*logfile) << "Tail is Updated to : " << local_tail->vnode->val << " from  " << prev->vnode->val <<endl;
-                }
-                //////////
+                aim_stat->tail.compare_exchange_strong(prev, local_tail);
+
             }
 
             if((long)local_tail->vnext.load() == set_mark ((long)end_snap_Vnode))
@@ -395,19 +390,11 @@ class SnapCollector{
                         Snap_Vnode * tmp = end_snap_Vnode;
                         if (local_tail != nullptr) {
                             tail_up = local_tail->vnext.compare_exchange_strong(tmp, snap_vnode);
-                            //////////////
-                            if(debug and tail_up)
-                                (*logfile) << "(LL)Snap Vnode added "<<snap_vnode<<" " << snap_vnode->vnode->val << " to "<< local_tail->vnode->val << endl;
-                            /////////////
+
                             if(tail_up){
                                 Snap_Vnode *tmp_snap_Vnode = local_tail;
-                                bool resp =aim_stat->tail.compare_exchange_strong(tmp_snap_Vnode, snap_vnode);
-                                /////////////
-                                if(resp  and debug)
-                                {
-                                    (*logfile) << "Tail is Updated to : " <<snap_vnode <<" "<<snap_vnode->vnode->val << " from  " <<tmp_snap_Vnode<<" " <<tmp_snap_Vnode->vnode->val <<endl;
-                                }
-                                /////////////
+                                aim_stat->tail.compare_exchange_strong(tmp_snap_Vnode, snap_vnode);
+
                             }
                         }
                         else{
@@ -417,19 +404,10 @@ class SnapCollector{
                                 tail_up = aim_stat->tail.compare_exchange_strong(tmp_snap_Vnode, snap_vnode);
                             else
                                 tail_up = aim_stat->tail.compare_exchange_strong(tmp_snap_Vnode , tmp_head);
-                            ////////
-                            if(head_up and tail_up  and debug)
-                            {
-                                (*logfile) << "Tail is Updated to : "<<snap_vnode << " " << snap_vnode->vnode->val << " from  null" <<endl;
-                            }
-                            /////////
+
                         }
 
 
-                        //////////
-                        if(debug and tail_up)
-                            (*logfile) << "(LL)Snap Vnode added "<<snap_vnode <<" "<< snap_vnode->vnode->val  << endl;
-                        //////////
 
                         int ret = update_local_tail(aim_stat, local_tail, find_key);
                         if (ret== -1) {
@@ -493,14 +471,7 @@ class SnapCollector{
         int kanva_model_iterator(KanvaModel<key_type, Vnode<val_type> *> *aimodel, aimodel_status *aim_stat, Snap_Vnode *&local_tail, val_type &find_key, bool is_first ,
                                  fstream * logfile, bool debug )
         {
-            /////////
-            if(debug){
-                (*logfile) << "Ai model status : " << aim_stat << endl;
-                (*logfile) << "Ai model status head : " << aim_stat->head << endl;
-                (*logfile) << "Ai model status tail : " << aim_stat->tail << endl;
-                (*logfile) << "Ai model status status : " << aim_stat->status << endl;
-            }
-            //////////
+
             int ret = 1;
             if(aim_stat->status.load() == 2)
                 return -1;
@@ -530,20 +501,11 @@ class SnapCollector{
                         Snap_Vnode * tmp = end_snap_Vnode;
                         if (local_tail != nullptr) {
                             tail_up = local_tail->vnext.compare_exchange_strong(tmp, snap_vnode);
-                            ///////
-                            if(tail_up and debug)
-                                (*logfile) << "Snap Vnode added " <<snap_vnode<<" " <<snap_vnode->vnode->val << " to " << local_tail->vnode->val<< endl;
-                            ///////
+
                             if(tail_up) {
                                 Snap_Vnode *tmp_tail = local_tail;
-                                bool resp =aim_stat->tail.compare_exchange_strong(tmp_tail, snap_vnode);
-                                ////////////
-                                if(resp  and debug) {
-                                    (*logfile) << "Tail is Updated to : " << snap_vnode<< " "<< snap_vnode->vnode->val << " from  "
-                                               <<tmp_tail << " " << tmp_tail->vnode->val << endl;
-                                }
+                                aim_stat->tail.compare_exchange_strong(tmp_tail, snap_vnode);
 
-                                ///////////
                             }
                         }
                         else{
@@ -552,19 +514,11 @@ class SnapCollector{
                                 tail_up = aim_stat->tail.compare_exchange_strong(tmp_tail, snap_vnode);
                             else
                                 tail_up = aim_stat->tail.compare_exchange_strong(tmp_tail , tmp_head);
-                            ////////////
-                            if(tail_up  and debug and head_up)
-                            {
-                                (*logfile) << "Tail is Updated to : "<<snap_vnode << " " << snap_vnode->vnode->val << " from  null"<<endl;
-                            }
-                            /////////
+
                         }
 
 
-                        ////////////
-                        if(debug and tail_up)
-                            (*logfile) << "Snap Vnode added "<<snap_vnode<<" " << snap_vnode->vnode->val << endl;
-                        ///////////////
+
 
                         //helping
                         ret = update_local_tail(aim_stat, local_tail, find_key);
@@ -599,11 +553,7 @@ class SnapCollector{
                         local_tail = tmp_head;
                         tmp_head = end_snap_Vnode;
                     }
-                    /////////////
-                    if(debug){
-                        (*logfile) << "Local tail : " << local_tail->vnode->val << " next is marked!!" << endl;
-                    }
-                    ////////////
+
                 }
                 int curr_status = 1;
                 aim_stat->status.compare_exchange_strong(curr_status, 2);
@@ -612,16 +562,6 @@ class SnapCollector{
         }
         void iterator(fstream * logfile, bool debug, int thread_num)
         {
-            if(debug){
-                (*logfile) << "Vertex Iteration" << endl;
-                ////////////
-                (*logfile) << "End Vnode : " << end_Vnode_T << endl;
-                (*logfile) << "End Enode : " <<  end_Enode_T << endl;
-                (*logfile) << "End Snap Enode : " << end_snap_Enode << endl;
-                (*logfile) << "End Snap Vnode : " << end_snap_Vnode << endl;
-
-                ///////////
-                }
 
             // reading the vertex list
             vector<KanvaModel<key_type, Vnode<val_type> *> > aimodels = km->get_aimodels();
@@ -676,72 +616,29 @@ class SnapCollector{
                 }
             }
 
-            //////////////////4
-            if(debug)
-                *logfile << "2nd Iteration Finished!!!" << endl;
-            ///////////////
+
 
             Snap_Vnode * snap_vertex_ptr = this->head_snap_Vnode;
 //            Snap_Vnode * test
-            //////
-            bool withmark = false,another_test = false;
-            Snap_Vnode *tmpty, *tmpty_vnext;
-            //////
+
             for(int i = 0; i < aimodels.size(); i++)
             {
                 if(aim_status_list[i].head.load() != nullptr) {
                     Snap_Vnode * tmp_endn = (Snap_Vnode *)get_marked_ref((long) end_snap_Vnode);
                     snap_vertex_ptr->vnext.compare_exchange_strong( tmp_endn,  aim_status_list[i].head.load());
-                    /////////////////////
-                    tmpty = aim_status_list[i].head;
-                    tmpty_vnext = tmpty->vnext;
-                    while (get_unmarked_ref((long)tmpty_vnext) != (long)end_snap_Vnode){
-                        tmpty = tmpty_vnext;
-                        tmpty_vnext = tmpty->vnext;
-                    }
 
-                    if(get_unmarked_ref((long)tmpty_vnext) == (long)end_snap_Vnode)
-                        another_test = true;
-                    /////////////////////
                     snap_vertex_ptr = aim_status_list[i].tail.load();
-                    ////////////
-                    if(tmpty != snap_vertex_ptr)
-                    {
-                        if(debug)
-                            *logfile << "tmpty != snap_vertex_ptr" << endl;
-                    }
 
-                    ////////////
                 }
             }
 
 
-            /////////
-            withmark = is_marked_ref((long) snap_vertex_ptr->vnext.load());
-            (*logfile) << "Is it marked right now: " << withmark  << endl;
 
-            //////////////
-            Snap_Vnode * snap_edge_vertex_ptr = head_snap_Vnode->vnext,*prev_ptr;
-            bool inhere = false;
-            while(!is_marked_ref((long)snap_edge_vertex_ptr)){
-
-                if( get_unmarked_ref((long)snap_edge_vertex_ptr) == (long)end_snap_Vnode  and !is_marked_ref((long)snap_edge_vertex_ptr->vnext.load())) {
-                    *logfile << "How the f is this happening" << endl << flush;
-                    inhere = true;
-                }
-                withmark = is_marked_ref((long) snap_vertex_ptr->vnext.load());
-                (*logfile) << "Node : "<< snap_vertex_ptr <<" val :" << snap_vertex_ptr->vnode->val <<"it marked right now: " << withmark  << endl;
-                prev_ptr = snap_edge_vertex_ptr;
-                snap_edge_vertex_ptr = prev_ptr->vnext;
-                Snap_Vnode * tmp = snap_edge_vertex_ptr->vnext;
-
-            }
-            /////////////
 
 
             this->read_edge = true;
-            
-            snap_edge_vertex_ptr = head_snap_Vnode->vnext;// used to identify current vertex we are iterating
+
+            Snap_Vnode *snap_edge_vertex_ptr = head_snap_Vnode->vnext;// used to identify current vertex we are iterating
             //iterate through the edge
             ///ist iteration
 
@@ -757,10 +654,7 @@ class SnapCollector{
                     snap_edge_vertex_ptr = snap_edge_vertex_ptr->vnext;
                     counter++;
                 }
-                ///////////////
-                bool  test = is_marked_ref((long)snap_edge_vertex_ptr);
-                bool test2 = get_unmarked_ref((long)snap_edge_vertex_ptr)  == (long) end_snap_Vnode;
-                //////////////
+
                 //reached end of vertex list
                 if(is_marked_ref((long)snap_edge_vertex_ptr))
                     break;
