@@ -5,7 +5,6 @@
 #include "kanva_model_impl.h"
 #include "../snapcollector.h"
 
-class SnapCollector;
 void reportEdge(Enode<val_type> *victim, Vnode <val_type> * source_enode, int tid, int action, fstream *logfile, bool debug);
 void reportVertex(Vnode<val_type> *victim,int tid, int action, fstream * logfile, bool debug);
 
@@ -303,21 +302,21 @@ int Kanva<key_type, Vnode<val_type>*>::ContainsE(key_type key1, key_type key2, i
             && !is_marked_ref((long) curre -> enext.load())
             && !is_marked_ref((long) u -> vnext.load())
             && !is_marked_ref((long) curre->v_dest-> vnext.load())) {
-//            reportEdge(curre ,u , tid, 2 ,logfile,debug);//
+            reportEdge(curre ,u , tid, 2 ,logfile,debug);//
             return 2;
         } else {
             if (is_marked_ref((long) u)) {
                 if(debug)
                     (*logfile) << "Source vertex : " << u->val << "(" << u << ")" <<" marked" << endl;
-//                reportVertex(u , tid , 1,logfile, debug);//
+                reportVertex(u , tid , 1,logfile, debug);//
             } else if (is_marked_ref((long) v)) {
                 if(debug)
                     (*logfile) << "Destination vertex : " << v->val << "(" << v << ")" <<" marked" << endl;
-//                reportVertex(v, tid , 1, logfile, debug);//
+                reportVertex(v, tid , 1, logfile, debug);//
             } else if (is_marked_ref((long) curre -> enext.load())) {
                 if(debug)
                     (*logfile) << "Edge marked : " << u->val << " " << curre->val << "(" << curre << ")" <<" marked" << endl;
-//                reportEdge(curre , u , tid , 1,logfile,debug);//
+                reportEdge(curre , u , tid , 1,logfile,debug);//
             }
             return 3;
         }
@@ -401,12 +400,12 @@ int Kanva<key_type, Vnode<val_type>*>::ContainsE(key_type key1, key_type key2, i
         {
             if (is_marked_ref((long)u->vnext.load()))
             {
-//                reportVertex(u, tid, 1, logfile, debug); //
+                reportVertex(u, tid, 1, logfile, debug); //
                 return 1;                                // either of the vertex is not present
             }
             else if (is_marked_ref((long)v->vnext.load()))
             {
-//                reportVertex(v, tid, 1, logfile, debug); //
+                reportVertex(v, tid, 1, logfile, debug); //
                 return 1;                                // either of the vertex is not present
             }
 
@@ -416,7 +415,7 @@ int Kanva<key_type, Vnode<val_type>*>::ContainsE(key_type key1, key_type key2, i
             {
                 if (debug)
                     (*logfile) << "Edge : " << key1 << " " << key2 << " already present" << endl;
-//                reportEdge(curre, u, tid, 2, logfile, debug); //
+                reportEdge(curre, u, tid, 2, logfile, debug); //
                 return 2;                                     // edge already present
             }
             Enode<val_type> *newe = new Enode<val_type>(key2, v, curre);//creating new edge
@@ -425,7 +424,7 @@ int Kanva<key_type, Vnode<val_type>*>::ContainsE(key_type key1, key_type key2, i
             {
                 if (debug)
                     (*logfile) << "New Edge added  : " << key1 << " " << key2 << "(" << newe << ")" << endl;
-//                reportEdge(newe, u, tid, 2, logfile, debug); //
+                reportEdge(newe, u, tid, 2, logfile, debug); //
                 return 3;
             }
             delete newe;
@@ -449,12 +448,12 @@ int Kanva<key_type, Vnode<val_type>*>::ContainsE(key_type key1, key_type key2, i
         {
             if (is_marked_ref((long)u->vnext.load()))
             {
-//                reportVertex(u, tid, 1, logfile, debug); //
+                reportVertex(u, tid, 1, logfile, debug); //
                 return 1;
             }
             else if (is_marked_ref((long)v->vnext.load()))
             {
-//                reportVertex(v, tid, 1, logfile, debug); //
+                reportVertex(v, tid, 1, logfile, debug); //
                 return 1;
             }
             locateE(&u, &prede, &curre, key2, tid, logfile, debug,thread_num);

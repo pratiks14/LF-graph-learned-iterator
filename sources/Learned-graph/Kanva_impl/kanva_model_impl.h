@@ -5,7 +5,8 @@
 #include "../snapcollector.h"
 
 
-
+void reportEdge(Enode<val_type> *victim, Vnode <val_type> * source_enode, int tid, int action, fstream *logfile, bool debug);
+void reportVertex(Vnode<val_type> *victim,int tid, int action, fstream * logfile, bool debug);
 
 template<class key_t, class val_t>
 KanvaModel<key_t, val_t>::KanvaModel(){
@@ -47,13 +48,13 @@ KanvaModel<key_t, val_t>::KanvaModel(lrmodel_type &lrmodel,
 
 
 template<class key_t, class val_t>
-key_t  KanvaModel<key_t, val_t>::get_keys(int i)
+key_t  KanvaModel<key_t, val_t>::get_keys(key_type i)
 {
     return keys[i];
 }
 
 template<class key_t, class val_t>
-val_t  KanvaModel<key_t, val_t>::get_vals(int i)
+val_t  KanvaModel<key_t, val_t>::get_vals(key_type i)
 {
     return vals[i].load();
 }
@@ -207,7 +208,7 @@ Vnode<val_type>* KanvaModel<key_type, Vnode<val_type>*>::find_retrain(const key_
     if(key == keys[pos]){
         Vnode<val_type>* temp = vals[pos];
         if(is_marked_ref((long)temp->vnext.load())) {
-//            reportVertex(temp , thread_num , 1, nullptr, false);
+            reportVertex(temp , thread_num , 1, nullptr, false);
             return nullptr;
         }
         else
@@ -267,7 +268,7 @@ bool KanvaModel<key_type, Vnode<val_type>*>::insert_retrain(const key_type &key,
     if(key == keys[pos]){
         Vnode<val_type>* temp = vals[pos];
         if(is_marked_ref((long)temp->vnext.load())) {
-//            reportVertex(temp , thread_num , 1, nullptr, false);
+            reportVertex(temp , thread_num , 1, nullptr, false);
             return false;
         }
         else
@@ -352,7 +353,7 @@ bool KanvaModel<key_type , Vnode<val_type>*>::remove(const key_type &key,int thr
         Vnode<val_type>* vnode = vals[pos].load();
         Vnode<val_type > *tmp = end_Vnode_T;
         int ret = vnode->vnext.compare_exchange_strong(tmp, (Vnode<val_type>*)set_mark((long) end_Vnode_T));
-//        reportVertex(tmp , thread_num , 1, nullptr, false);
+        reportVertex(tmp , thread_num , 1, nullptr, false);
         return ret;
 
     }

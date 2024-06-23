@@ -64,7 +64,8 @@ func process_mobs(mobs_lf, aimodel_status,&local_tail, &find_key){
             Node current_root = unmarked(mobs->mob.lflb->root)
             if current_root.isinternal(){
                 int cnt = current_root->count
-                for i in cnt-1{
+                pos = current_root->find_pos(find_key)
+                for i = pos to cnt-1{
                     if current_root->key < find_key
                         continue
                     //process the linked list of leaf nodes
@@ -108,7 +109,8 @@ func process_mobs(mobs_lf, aimodel_status,&local_tail, &find_key){
     if aimodel_status.status !=2{
          //only in kanva model case
         //iterate over bins and values one after another
-        for(int i = 0; i < aimodel.values.size(); i++){
+        pos = aimodel->find_pos(find_key)
+        for(int i = pos; i < aimodel.values.size(); i++){
             if(mobs_lf[i] != nullptr and aimodel.keys[i]> find_key){
                 ret = process_mobs(mobs_lf[i], aimodel_status, local_tail, find_key);
                 if ret == -1

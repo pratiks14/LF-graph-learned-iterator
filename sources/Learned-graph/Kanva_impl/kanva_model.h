@@ -42,15 +42,16 @@ public:
     val_t find_retrain(const key_t &key, val_t &val ,int thread_num);
     bool insert_retrain(const key_t &key, val_t val, int thread_num);
     bool remove(const key_t &key,int thread_num);
-    key_t get_keys(int i);
-    val_t get_vals(int i);
+    key_t get_keys(key_type i);
+    val_t get_vals(key_type i);
     struct model_or_bin<key_t,val_t> *get_mobs(int i);
     int get_capacity();
-
-
-private:
     inline size_t predict(const key_t &key);
     inline size_t locate_in_levelbin(const key_t &key, const size_t pos);
+
+private:
+
+
     inline size_t find_lower(const key_t &key, const size_t pos);
     inline size_t linear_search(const key_t *arr, int n, key_t key);
     inline size_t find_lower_avx(const int *arr, int n, int key);

@@ -22,7 +22,7 @@ using namespace std;
 //template<class key_t, class val_t>
 //class Kanva;
 
-//class SnapCollector;
+class SnapCollector;
 
 
 atomic<SnapCollector *> PSC = {nullptr};
@@ -443,10 +443,14 @@ class SnapCollector{
                 return -1;
             
             if (mobs_lflb->isbin){
-                auto *current_root = (Node < key_type, Vnode<val_type> *> *)get_unmarked_ref((long)mobs_lflb->mob.lflb->root.load());
-                if (current_root->isinternal()){
+                //type node
+                auto *current_n = (Node < key_type, Vnode<val_type> *> *)get_unmarked_ref((long)mobs_lflb->mob.lflb->root.load());
+
+                if (current_n->isinternal()){
+                    auto *current_root = (Internal_Node<key_type, Vnode<val_type> *> *)current_n;
+                    key_type ptr_idx = std::lower_bound(current_root -> key.begin(), current_root -> key.begin() + current_root -> count, find_key) - current_root -> key.begin();
                     long cnt = current_root->count.load();
-                    for(long i=0; i<cnt-1; i++){
+                    for(key_type i=ptr_idx; i<cnt-1; i++){
                         if(((Internal_Node<key_type, Vnode<val_type> *>*)current_root)->key[i] < find_key)
                             continue;
                         
@@ -464,7 +468,7 @@ class SnapCollector{
                 }
                 else{
 
-                    Linked_List<key_type, Vnode<val_type> *> *lln = &((leaf_node<key_type, Vnode<val_type> *>*)current_root)->data_array_list;
+                    Linked_List<key_type, Vnode<val_type> *> *lln = &((leaf_node<key_type, Vnode<val_type> *>*)current_n)->data_array_list;
                     ret = addL(lln, aim_stat, local_tail, find_key, logfile, debug);
                     if (ret == -1)
                         return -1;
@@ -487,7 +491,12 @@ class SnapCollector{
             if(aim_stat->status.load() == 2)
                 return -1;
 
-            for (int i = 0; i < aimodel->get_capacity(); i++)
+            size_t pos = aimodel->predict(find_key);
+            pos = aimodel->locate_in_levelbin(find_key, pos);
+
+            key_type bin_pos = find_key<aimodel->get_keys(pos)?pos:(pos+1);
+
+            for (key_type i = bin_pos; i < aimodel->get_capacity(); i++)
             {
                 model_or_bin<key_type, Vnode<val_type>*> *mobs = aimodel->get_mobs(i);
                 if (mobs != nullptr and aimodel->get_keys(i) > find_key)
@@ -1499,7 +1508,7 @@ SnapCollector *takeSnapshot(Kanva<key_type, Vnode<val_type> *> *km, int max_thre
  * @param tid 
  * @param action insert->2/delete->1/block->3
  */
-void reportVertex(Vnode<val_type> *victim,int tid, int action){
+void reportVertex(Vnode<val_type> *victim,int tid, int action, fstream *logfile, bool debug){
 //    if(debug)
 //        (*logfile) << "Report vertex : " << victim->val <<" action " << action<< endl;
 

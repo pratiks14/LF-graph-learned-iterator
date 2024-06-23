@@ -110,7 +110,7 @@ void Linked_List<K, V>::collect(std::vector<K> &keys, std::vector<V> &vals, int 
             vals.push_back(left_node->value);
         }
         else{
-//            reportVertex(left_node->value, thread_num,1, nullptr, false);
+            reportVertex(left_node->value, thread_num,1, nullptr, false);
         }
         left_node = (ll_Node<K, V> *)get_unmarked_ref((long)left_node);
     }
@@ -133,16 +133,16 @@ Vnode<val_type> *Linked_List<key_type, Vnode<val_type> *>::search(val_type key,i
     ll_Node<val_type, Vnode<val_type> *> *curr = head,*tmp;
     while (curr->key < key){
         tmp = curr->next.load(std::memory_order_seq_cst);
-//        if(is_marked_ref((long)tmp))
-//            reportVertex(curr->value, thread_num, 1, nullptr, false);
+        if(is_marked_ref((long)tmp))
+            reportVertex(curr->value, thread_num, 1, nullptr, false);
         curr = (ll_Node<val_type, Vnode<val_type> *> *)unset_freeze_mark((uintptr_t)curr->next.load(std::memory_order_seq_cst));
     }
 
     if (curr->key == key and !is_marked_ref((long)curr->next.load(std::memory_order_seq_cst)))
         return curr->value;
     else {
-//        if(curr->key == key)
-//            reportVertex(curr->value, thread_num, 1, nullptr, false);
+        if(curr->key == key)//its marked
+            reportVertex(curr->value, thread_num, 1, nullptr, false);
 
         return nullptr;
     }
@@ -182,7 +182,7 @@ retry:
             }
             while (is_marked_ref((long)right_next))
             {
-//                reportVertex(right_node->value, thread_num, 1, nullptr, false);
+                reportVertex(right_node->value, thread_num, 1, nullptr, false);
                 if (!((*left_node)->next.compare_exchange_strong(right_node, (ll_Node<K, V> *)get_unmarked_ref((long)right_next))))
                 {
                     goto retry;
@@ -278,8 +278,8 @@ int Linked_List<K, V>::remove(K key, int thread_num)
                 {
                     if (!right_node->next.compare_exchange_strong(right_next, (ll_Node<K, V> *)set_mark((long)right_next)))
                         continue;
-//                    else
-//                        reportVertex(right_node->value, thread_num, 1, nullptr, false);
+                    else
+                        reportVertex(right_node->value, thread_num, 1, nullptr, false);
                 }
                 prev_node->next.compare_exchange_strong(right_node, (ll_Node<K, V> *)get_unmarked_ref((long)right_next)); // physical deletion
                 return 1;
@@ -342,7 +342,7 @@ int Linked_List<key_type, Vnode<val_type> *>::insert(key_type key, Vnode<val_typ
             new_node->next.store(right_node);
             if (prev_node->next.compare_exchange_strong(right_node, new_node))
             {
-//                reportVertex(value, thread_num, 2, nullptr, false);
+                reportVertex(value, thread_num, 2, nullptr, false);
                 count++;
                 return 1;
             }
