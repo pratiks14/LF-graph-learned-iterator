@@ -65,6 +65,8 @@
 
 #include "snapcollector.h"
 #include "kanva_util.h"
+#include "Kanva_impl/kanva.h"
+#include "Kanva_impl/kanva_impl.h"
 
 using namespace std;
 
@@ -161,7 +163,7 @@ void *thread_funct(void * t_args){
                 chrono::high_resolution_clock::time_point startT = chrono::high_resolution_clock::now();
                 Enode<key_type> * EHead = new Enode<key_type>(0, NULL,end_Enode_T);
                 Vnode<val_type> *v = new Vnode<val_type>(rand_node_id, end_Vnode_T, EHead);
-                bool ret = graph->insert(rand_node_id, v);
+                bool ret = graph->insert(rand_node_id, v,thread_num);
                 if(debug){
                     if(ret)
                         (logfile_th) << "Kye " << rand_node_id << " added !!" << endl;
@@ -188,7 +190,7 @@ void *thread_funct(void * t_args){
                 if(debug)
                     logfile_th << " thread id : " << thread_num << "Delete vertex : " << rand_node_id << endl;
                 chrono::high_resolution_clock::time_point startT = chrono::high_resolution_clock::now();
-                graph->remove(rand_node_id);
+                graph->remove(rand_node_id,thread_num);
                 chrono::high_resolution_clock::time_point endT = chrono::high_resolution_clock::now();
                 double timeTaken = chrono::duration_cast<chrono::microseconds>(endT-startT).count() ;
 
@@ -212,7 +214,7 @@ void *thread_funct(void * t_args){
                     logfile_th << " thread id : " << thread_num << "Add edge : " << rand_source << " " << rand_dest << endl;
                 chrono::high_resolution_clock::time_point startT = chrono::high_resolution_clock::now();
 
-                graph->AddEdge(rand_source , rand_dest , thread_num,&logfile_th,debug);
+                graph->AddEdge(rand_source , rand_dest , thread_num,&logfile_th,debug,thread_num);
                 chrono::high_resolution_clock::time_point endT = chrono::high_resolution_clock::now();
                 double timeTaken = chrono::duration_cast<chrono::microseconds>(endT-startT).count() ;
 
@@ -235,7 +237,7 @@ void *thread_funct(void * t_args){
                 if(debug)
                     logfile_th << " thread id : " << thread_num << " Delete edge : " << rand_source << " " << rand_dest  << endl;
                 chrono::high_resolution_clock::time_point startT = chrono::high_resolution_clock::now();
-                graph->RemoveE(rand_source , rand_dest , thread_num,&logfile_th,debug);
+                graph->RemoveE(rand_source , rand_dest , thread_num,&logfile_th,debug,thread_num);
                 chrono::high_resolution_clock::time_point endT = chrono::high_resolution_clock::now();
                 double timeTaken = chrono::duration_cast<chrono::microseconds>(endT-startT).count() ;
 
@@ -258,7 +260,7 @@ void *thread_funct(void * t_args){
                 if(debug)
                     logfile_th << " thread id : " << thread_num << " Contians Edge : " << rand_source << " " << rand_dest  << endl;
                 chrono::high_resolution_clock::time_point startT = chrono::high_resolution_clock::now();
-                graph->ContainsE(rand_source , rand_dest , thread_num,&logfile_th,debug);
+                graph->ContainsE(rand_source , rand_dest , thread_num,&logfile_th,debug,thread_num);
                 chrono::high_resolution_clock::time_point endT = chrono::high_resolution_clock::now();
                 double timeTaken = chrono::duration_cast<chrono::microseconds>(endT-startT).count() ;
 
@@ -279,7 +281,7 @@ void *thread_funct(void * t_args){
                     logfile_th << " thread id : " << thread_num << " Contains vertex : " << node_id  << endl;
                 chrono::high_resolution_clock::time_point startT = chrono::high_resolution_clock::now();
                 Vnode<val_type> * node = nullptr;
-                graph->find(node_id , node);
+                graph->find(node_id , node,thread_num);
                 chrono::high_resolution_clock::time_point endT = chrono::high_resolution_clock::now();
                 double timeTaken = chrono::duration_cast<chrono::microseconds>(endT-startT).count() ;
 

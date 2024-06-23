@@ -39,13 +39,14 @@ public:
     void self_check_retrain();
     int rangequery(const key_t &key, const int n, std::vector<std::pair<key_t, val_t>> &result);
 
-    val_t find_retrain(const key_t &key, val_t &val);
-    bool insert_retrain(const key_t &key, val_t val);
-    bool remove(const key_t &key);
+    val_t find_retrain(const key_t &key, val_t &val ,int thread_num);
+    bool insert_retrain(const key_t &key, val_t val, int thread_num);
+    bool remove(const key_t &key,int thread_num);
     key_t get_keys(int i);
     val_t get_vals(int i);
     struct model_or_bin<key_t,val_t> *get_mobs(int i);
-    int get_capacity(); 
+    int get_capacity();
+
 
 private:
     inline size_t predict(const key_t &key);
@@ -54,8 +55,8 @@ private:
     inline size_t linear_search(const key_t *arr, int n, key_t key);
     inline size_t find_lower_avx(const int *arr, int n, int key);
     inline size_t find_lower_avx(const int64_t *arr, int n, int64_t key);
-    bool insert_model_or_bin(const key_t &key, const val_t &val, size_t bin_pos);
-    bool remove_model_or_bin(const key_t &key, const int bin_pos);
+    bool insert_model_or_bin(const key_t &key, const val_t &val, size_t bin_pos, int thread_num);
+    bool remove_model_or_bin(const key_t &key, const int bin_pos,int thread_num);
     
 
 
@@ -69,5 +70,7 @@ private:
     bool* valid_flag = nullptr;
     std::atomic<struct model_or_bin<key_t,val_t> *>* mobs_lf = nullptr;
     const size_t capacity;
+
+
 };
 #endif //KANVA_KANVA_MODEL_H

@@ -3,6 +3,11 @@
 #include "kanva.h"
 #include "kanva_model.h"
 #include "kanva_model_impl.h"
+#include "../snapcollector.h"
+
+class SnapCollector;
+void reportEdge(Enode<val_type> *victim, Vnode <val_type> * source_enode, int tid, int action, fstream *logfile, bool debug);
+void reportVertex(Vnode<val_type> *victim,int tid, int action, fstream * logfile, bool debug);
 
 template<class key_t, class val_t>
 inline Kanva<key_t, val_t>::Kanva()
@@ -163,9 +168,9 @@ void Kanva<key_t, val_t>::self_check()
 
 // =================== search the data =======================
 template<class key_t, class val_t>
-inline val_t Kanva<key_t, val_t>::find(const key_t &key, val_t &val)
+inline val_t Kanva<key_t, val_t>::find(const key_t &key, val_t &val, int thread_num)
 {
-      return find_model(key)[0].find_retrain(key, val);
+      return find_model(key)[0].find_retrain(key, val, thread_num);
 }
 
 
@@ -191,18 +196,18 @@ int Kanva<key_t, val_t>::rangequery(const key_t &key, const int n,
 // =================== insert the data =======================
 template<class key_t, class val_t>
 inline bool Kanva<key_t, val_t>::insert(
-        const key_t& key, const val_t& val)
+        const key_t& key, const val_t& val, int thread_num)
 {
-    return find_model(key)[0].insert_retrain(key, val);
+    return find_model(key)[0].insert_retrain(key, val, thread_num);
 }
 
 
 
 // ==================== remove =====================
 template<class key_t, class val_t>
-inline bool Kanva<key_t, val_t>::remove(const key_t& key)
+inline bool Kanva<key_t, val_t>::remove(const key_t& key,int thread_num)
 {
-    return find_model(key)[0].remove(key);
+    return find_model(key)[0].remove(key,thread_num);
 
     //return find_model(key)[0].con_insert(key, val);
 }
@@ -213,10 +218,10 @@ inline bool Kanva<key_t, val_t>::remove(const key_t& key)
 //======================= contains Edge ========================
 
 template<class key_t, class val_t>
-bool Kanva<key_t, val_t>::fetch_vertices(val_t  *n1, val_t *n2, key_t key1, key_t key2) {
+bool Kanva<key_t, val_t>::fetch_vertices(val_t  *n1, val_t *n2, key_t key1, key_t key2,int thread_num) {
 
     val_t tmp;//will not be uused should be removed later
-    val_t node = find(key1, tmp);
+    val_t node = find(key1, tmp,thread_num);
 
     if constexpr(std::is_pointer_v<val_t>)
     {
@@ -229,7 +234,7 @@ bool Kanva<key_t, val_t>::fetch_vertices(val_t  *n1, val_t *n2, key_t key1, key_
 
     *n1 = node;
 
-    node = find(key2, tmp);
+    node = find(key2, tmp,thread_num);
     if constexpr(std::is_pointer_v<val_t>) {
         if(node == nullptr) {
             return false;
@@ -244,11 +249,11 @@ bool Kanva<key_t, val_t>::fetch_vertices(val_t  *n1, val_t *n2, key_t key1, key_
 }
 
 template <class key_t, class val_t>
-bool Kanva<key_t, val_t>::fetch_vertices_help(val_t *n1, val_t *n2, key_t key1, key_t key2)
+bool Kanva<key_t, val_t>::fetch_vertices_help(val_t *n1, val_t *n2, key_t key1, key_t key2,int thread_num)
 {
 
     val_t tmp; // will not be uused should be removed later
-    val_t node = find(key1, tmp);
+    val_t node = find(key1, tmp,thread_num);
 
     if constexpr (std::is_pointer_v<val_t>)
     {
@@ -262,7 +267,7 @@ bool Kanva<key_t, val_t>::fetch_vertices_help(val_t *n1, val_t *n2, key_t key1, 
 
     *n1 = node;
 
-    node = find(key2, tmp);
+    node = find(key2, tmp,thread_num);
     if constexpr (std::is_pointer_v<val_t>)
     {
         if (node == nullptr)
@@ -280,10 +285,10 @@ bool Kanva<key_t, val_t>::fetch_vertices_help(val_t *n1, val_t *n2, key_t key1, 
 }
 
 template<>
-int Kanva<key_type, Vnode<val_type>*>::ContainsE(key_type key1, key_type key2, int tid, fstream *logfile, bool debug) {
+int Kanva<key_type, Vnode<val_type>*>::ContainsE(key_type key1, key_type key2, int tid, fstream *logfile, bool debug,int thread_num) {
         Enode<val_type> * curre, * prede;
         Vnode<val_type> *u,  *v;
-        bool flag = fetch_vertices( & u, & v, key1, key2);
+        bool flag = fetch_vertices( & u, & v, key1, key2,thread_num);
 
         if (!flag) {
             return 1; // either of the vertex is not present
@@ -298,21 +303,21 @@ int Kanva<key_type, Vnode<val_type>*>::ContainsE(key_type key1, key_type key2, i
             && !is_marked_ref((long) curre -> enext.load())
             && !is_marked_ref((long) u -> vnext.load())
             && !is_marked_ref((long) curre->v_dest-> vnext.load())) {
-            //reportEdge(curre ,u , tid, 2 ,logfile,debug);//
+//            reportEdge(curre ,u , tid, 2 ,logfile,debug);//
             return 2;
         } else {
             if (is_marked_ref((long) u)) {
                 if(debug)
                     (*logfile) << "Source vertex : " << u->val << "(" << u << ")" <<" marked" << endl;
-                //reportVertex(u , tid , 1,logfile, debug);//
+//                reportVertex(u , tid , 1,logfile, debug);//
             } else if (is_marked_ref((long) v)) {
                 if(debug)
                     (*logfile) << "Destination vertex : " << v->val << "(" << v << ")" <<" marked" << endl;
-                //reportVertex(v, tid , 1, logfile, debug);//
+//                reportVertex(v, tid , 1, logfile, debug);//
             } else if (is_marked_ref((long) curre -> enext.load())) {
                 if(debug)
                     (*logfile) << "Edge marked : " << u->val << " " << curre->val << "(" << curre << ")" <<" marked" << endl;
-                //reportEdge(curre , u , tid , 1,logfile,debug);//
+//                reportEdge(curre , u , tid , 1,logfile,debug);//
             }
             return 3;
         }
@@ -321,7 +326,8 @@ int Kanva<key_type, Vnode<val_type>*>::ContainsE(key_type key1, key_type key2, i
 
 //======================= Insert Edge ========================
     template<>
-    void Kanva<key_type, Vnode<val_type>*>::locateE(Vnode<val_type> **source_of_edge, Enode<val_type> **n1, Enode<val_type> **n2, int key, int tid, fstream *logfile, bool debug)
+    void Kanva<key_type, Vnode<val_type>*>::locateE(Vnode<val_type> **source_of_edge, Enode<val_type> **n1, Enode<val_type> **n2, int key,
+                                                    int tid, fstream *logfile, bool debug,int thread_num)
     {
         Enode<val_type> *succe, *curre, *prede;
         Vnode<val_type> *tv;
@@ -344,7 +350,7 @@ int Kanva<key_type, Vnode<val_type>*>::ContainsE(key_type key1, key_type key2, i
                 while (curre != end_Enode_T &&
                        (is_marked_ref((long)tv->vnext.load()) || is_marked_ref((long)succe)) && curre->val <= key)
                 {
-                    //reportEdge(curre, *source_of_edge, tid, 1, logfile, debug);
+                    reportEdge(curre, *source_of_edge, tid, 1, logfile, debug);
                     //report current node as marked if not already marked or if vdest is marked
 
                     if (!is_marked_ref((long)succe) and !atomic_compare_exchange_strong(&curre->enext, &succe, (Enode<val_type> *)get_marked_ref((long)succe)))
@@ -380,11 +386,11 @@ int Kanva<key_type, Vnode<val_type>*>::ContainsE(key_type key1, key_type key2, i
     // add a new edge in the edge-list
     // returns 1 if vertex not present, 2 if edge already present and 3 if edge added
     template<>
-    int Kanva<key_type, Vnode<val_type>*>::AddEdge(key_type key1, key_type key2, int tid, fstream *logfile, bool debug)
+    int Kanva<key_type, Vnode<val_type>*>::AddEdge(key_type key1, key_type key2, int tid, fstream *logfile, bool debug,int thread_num)
     {
         Enode<val_type> *prede, *curre;
         Vnode<val_type> *u, *v;
-        bool flag = fetch_vertices_help(&u, &v, key1, key2);//within this if Vnode is found to be marked then its reported
+        bool flag = fetch_vertices_help(&u, &v, key1, key2,thread_num);//within this if Vnode is found to be marked then its reported
         if (flag == false)
         {
             return 1; // either of the vertex is not present
@@ -395,22 +401,22 @@ int Kanva<key_type, Vnode<val_type>*>::ContainsE(key_type key1, key_type key2, i
         {
             if (is_marked_ref((long)u->vnext.load()))
             {
-                //reportVertex(u, tid, 1, logfile, debug); //
+//                reportVertex(u, tid, 1, logfile, debug); //
                 return 1;                                // either of the vertex is not present
             }
             else if (is_marked_ref((long)v->vnext.load()))
             {
-                //reportVertex(v, tid, 1, logfile, debug); //
+//                reportVertex(v, tid, 1, logfile, debug); //
                 return 1;                                // either of the vertex is not present
             }
 
-            locateE(&u, &prede, &curre, key2, tid, logfile, debug);
+            locateE(&u, &prede, &curre, key2, tid, logfile, debug,thread_num);
 
             if (curre->val == key2)
             {
                 if (debug)
                     (*logfile) << "Edge : " << key1 << " " << key2 << " already present" << endl;
-                //reportEdge(curre, u, tid, 2, logfile, debug); //
+//                reportEdge(curre, u, tid, 2, logfile, debug); //
                 return 2;                                     // edge already present
             }
             Enode<val_type> *newe = new Enode<val_type>(key2, v, curre);//creating new edge
@@ -419,7 +425,7 @@ int Kanva<key_type, Vnode<val_type>*>::ContainsE(key_type key1, key_type key2, i
             {
                 if (debug)
                     (*logfile) << "New Edge added  : " << key1 << " " << key2 << "(" << newe << ")" << endl;
-                //reportEdge(newe, u, tid, 2, logfile, debug); //
+//                reportEdge(newe, u, tid, 2, logfile, debug); //
                 return 3;
             }
             delete newe;
@@ -429,11 +435,11 @@ int Kanva<key_type, Vnode<val_type>*>::ContainsE(key_type key1, key_type key2, i
 
     //======================= Remove Edge ========================
     template<>
-    int Kanva<key_type, Vnode<val_type> *>::RemoveE(key_type key1, key_type key2, int tid, fstream *logfile, bool debug)
+    int Kanva<key_type, Vnode<val_type> *>::RemoveE(key_type key1, key_type key2, int tid, fstream *logfile, bool debug,int thread_num)
     {
         Enode<val_type> *prede, *curre, *succe;
         Vnode<val_type> *u, *v;
-        bool flag = fetch_vertices_help(&u, &v, key1, key2);
+        bool flag = fetch_vertices_help(&u, &v, key1, key2,thread_num);
         if (flag == false)
         {
             return 1; // either of the vertex is not present
@@ -443,15 +449,15 @@ int Kanva<key_type, Vnode<val_type>*>::ContainsE(key_type key1, key_type key2, i
         {
             if (is_marked_ref((long)u->vnext.load()))
             {
-                //reportVertex(u, tid, 1, logfile, debug); //
+//                reportVertex(u, tid, 1, logfile, debug); //
                 return 1;
             }
             else if (is_marked_ref((long)v->vnext.load()))
             {
-                //reportVertex(v, tid, 1, logfile, debug); //
+//                reportVertex(v, tid, 1, logfile, debug); //
                 return 1;
             }
-            locateE(&u, &prede, &curre, key2, tid, logfile, debug);
+            locateE(&u, &prede, &curre, key2, tid, logfile, debug,thread_num);
 
             if (curre->val != key2)
             {

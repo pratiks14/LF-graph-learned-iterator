@@ -9,6 +9,13 @@
 #include <unordered_set>
 #include <iostream>
 #include "util1.h"
+#include "../../snapcollector.h"
+
+
+
+void reportEdge(Enode<val_type> *victim, Vnode <val_type> * source_enode, int tid, int action, fstream *logfile, bool debug);
+void reportVertex(Vnode<val_type> *victim,int tid, int action, fstream * logfile, bool debug);
+
 
 template <typename K, typename V>
 class Linked_List
@@ -31,12 +38,12 @@ public:
 
     bool insert(K Key, V value, ll_Node<K, V> *new_node);
 
-    int insert(K Key, V value, int tid, int phase);
+//    int insert(K Key, V value, int tid, int phase);
 
-    V search(K key);
+    V search(K key, int thread_num);
 
 
-    void collect(std::vector<K> &, std::vector<V> &);
+    void collect(vector<K> &keys, vector<V> &vals, int thread_num);
 
     void range_query(int64_t low, int64_t high, int64_t curr_ts, std::vector<std::pair<K, V>> &res);
 
@@ -44,9 +51,16 @@ public:
 
     ll_Node<K, V> *find(K key, ll_Node<K, V> **);
 
-    int remove(K key);
+    int remove(K key, int thread_num);
 
     int range_query(K key, int remaining, std::vector<std::pair<K, V>> &result);
+
+    ll_Node<K, V> *find(K key, ll_Node<K, V> **left_node, int thread_num);
+
+    int insert(K key, V value, int thread_num);
+
+
+
 };
 
 template <typename K, typename V>
@@ -72,7 +86,7 @@ int Linked_List<K, V>::range_query(K key, int remaining, std::vector<std::pair<K
     return n;
 }
 template <typename K, typename V>
-void Linked_List<K, V>::collect(std::vector<K> &keys, std::vector<V> &vals)
+void Linked_List<K, V>::collect(std::vector<K> &keys, std::vector<V> &vals, int thread_num)
 {
     ll_Node<K, V> *left_node = head;
     int i = 0;
@@ -95,6 +109,9 @@ void Linked_List<K, V>::collect(std::vector<K> &keys, std::vector<V> &vals)
             keys.push_back(left_node->key);
             vals.push_back(left_node->value);
         }
+        else{
+//            reportVertex(left_node->value, thread_num,1, nullptr, false);
+        }
         left_node = (ll_Node<K, V> *)get_unmarked_ref((long)left_node);
     }
     keys.pop_back();
@@ -102,7 +119,7 @@ void Linked_List<K, V>::collect(std::vector<K> &keys, std::vector<V> &vals)
 }
 
 template <typename K, typename V>
-V Linked_List<K, V>::search(K key)
+V Linked_List<K, V>::search(K key, int thread_num)
 {
     ll_Node<K, V> *curr = head;
     while (curr->key < key)
@@ -110,17 +127,25 @@ V Linked_List<K, V>::search(K key)
     return (curr->key == key && !is_marked_ref((long)curr->next.load(std::memory_order_seq_cst)));
 }
 
-template <>
-Vnode<val_type> *Linked_List<key_type, Vnode<val_type> *>::search(val_type key)
+template<>
+Vnode<val_type> *Linked_List<key_type, Vnode<val_type> *>::search(val_type key,int thread_num)
 {
-    ll_Node<val_type, Vnode<val_type> *> *curr = head;
-    while (curr->key < key)
+    ll_Node<val_type, Vnode<val_type> *> *curr = head,*tmp;
+    while (curr->key < key){
+        tmp = curr->next.load(std::memory_order_seq_cst);
+//        if(is_marked_ref((long)tmp))
+//            reportVertex(curr->value, thread_num, 1, nullptr, false);
         curr = (ll_Node<val_type, Vnode<val_type> *> *)unset_freeze_mark((uintptr_t)curr->next.load(std::memory_order_seq_cst));
+    }
 
     if (curr->key == key and !is_marked_ref((long)curr->next.load(std::memory_order_seq_cst)))
         return curr->value;
-    else
+    else {
+//        if(curr->key == key)
+//            reportVertex(curr->value, thread_num, 1, nullptr, false);
+
         return nullptr;
+    }
 }
 
 
@@ -138,9 +163,57 @@ Vnode<val_type> *Linked_List<key_type, Vnode<val_type> *>::search(val_type key)
 // }
 
 template <typename K, typename V>
-ll_Node<K, V> *Linked_List<K, V>::find(K key, ll_Node<K, V> **left_node)
+ll_Node<K, V> *Linked_List<K, V>::find(K key, ll_Node<K, V> **left_node, int thread_num)
 {
 retry:
+    while (true)
+    {
+        (*left_node) = head;
+        ll_Node<K, V> *right_node;
+        if (is_freeze((uintptr_t)(*left_node)->next.load(std::memory_order_seq_cst)))
+            return nullptr;
+        right_node = (ll_Node<K, V> *)unset_freeze_mark((long)(*left_node)->next.load(std::memory_order_seq_cst));
+        while (true)
+        {
+            ll_Node<K, V> *right_next = right_node->next.load(std::memory_order_seq_cst);
+            if (is_freeze((uintptr_t)right_next))
+            {
+                return nullptr;
+            }
+            while (is_marked_ref((long)right_next))
+            {
+//                reportVertex(right_node->value, thread_num, 1, nullptr, false);
+                if (!((*left_node)->next.compare_exchange_strong(right_node, (ll_Node<K, V> *)get_unmarked_ref((long)right_next))))
+                {
+                    goto retry;
+                }
+                else
+                {
+                    right_node = (ll_Node<K, V> *)unset_freeze_mark((long)right_next);
+                    right_next = right_node->next.load(std::memory_order_seq_cst);
+                }
+                if (is_freeze((uintptr_t)right_next))
+                {
+                    return nullptr;
+                }
+                if (is_freeze((uintptr_t)right_node))
+                {
+                    return nullptr;
+                }
+            }
+            if (right_node->key >= key)
+                return right_node;
+            (*left_node) = right_node;
+            right_node = (ll_Node<K, V> *)get_unmarked_ref((long)right_next);
+        }
+    }
+}
+
+
+template <typename K, typename V>
+ll_Node<K, V> *Linked_List<K, V>::find(K key, ll_Node<K, V> **left_node)
+{
+    retry:
     while (true)
     {
         (*left_node) = head;
@@ -184,14 +257,14 @@ retry:
 }
 
 template <typename K, typename V>
-int Linked_List<K, V>::remove(K key)
+int Linked_List<K, V>::remove(K key, int thread_num)
 {
     while (true)
     {
         while (true)
         {
             ll_Node<K, V> *prev_node = nullptr;
-            ll_Node<K, V> *right_node = find(key, &prev_node);
+            ll_Node<K, V> *right_node = find(key, &prev_node,thread_num);
             if (right_node == nullptr)
                 return -1;
             if (right_node->key != key)
@@ -205,6 +278,8 @@ int Linked_List<K, V>::remove(K key)
                 {
                     if (!right_node->next.compare_exchange_strong(right_next, (ll_Node<K, V> *)set_mark((long)right_next)))
                         continue;
+//                    else
+//                        reportVertex(right_node->value, thread_num, 1, nullptr, false);
                 }
                 prev_node->next.compare_exchange_strong(right_node, (ll_Node<K, V> *)get_unmarked_ref((long)right_next)); // physical deletion
                 return 1;
@@ -214,13 +289,13 @@ int Linked_List<K, V>::remove(K key)
 }
 
 template <typename K, typename V>
-int Linked_List<K, V>::insert(K key, V value)
+int Linked_List<K, V>::insert(K key, V value, int thread_num)
 {
     //    return -1;
     while (true)
     {
         ll_Node<K, V> *prev_node = nullptr;
-        ll_Node<K, V> *right_node = find(key, &prev_node);
+        ll_Node<K, V> *right_node = find(key, &prev_node,thread_num);
         if (right_node == nullptr)
             return -1;
         if (right_node->key == key)
@@ -246,13 +321,13 @@ int Linked_List<K, V>::insert(K key, V value)
 }
 
 template <>
-int Linked_List<key_type, Vnode<val_type> *>::insert(key_type key, Vnode<val_type> *value)
+int Linked_List<key_type, Vnode<val_type> *>::insert(key_type key, Vnode<val_type> *value, int thread_num)
 {
     //    return -1;
     while (true)
     {
         ll_Node<key_type, Vnode<val_type> *> *prev_node = nullptr;
-        ll_Node<key_type, Vnode<val_type> *> *right_node = find(key, &prev_node);
+        ll_Node<key_type, Vnode<val_type> *> *right_node = find(key, &prev_node,thread_num);
         if (right_node == nullptr)
             return -1;
         if (right_node->key == key)
@@ -267,6 +342,7 @@ int Linked_List<key_type, Vnode<val_type> *>::insert(key_type key, Vnode<val_typ
             new_node->next.store(right_node);
             if (prev_node->next.compare_exchange_strong(right_node, new_node))
             {
+//                reportVertex(value, thread_num, 2, nullptr, false);
                 count++;
                 return 1;
             }

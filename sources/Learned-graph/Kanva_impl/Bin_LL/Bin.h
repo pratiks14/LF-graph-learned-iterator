@@ -10,10 +10,10 @@ class Bin {
 public:
     std::atomic<Node<K,V>*> root;
     std::atomic <int64_t> size;
-    std::vector <std::pair<K, V>> collect();
-    bool insert(K, V);
-    bool remove(K);
-    void collect(std::vector<K> &keys, std::vector<V> &Vals);
+//    std::vector <std::pair<K, V>> collect();
+    bool insert(K, V,int thread_num);
+    bool remove(K, int thread_num);
+    void collect(std::vector<K> &keys, std::vector<V> &Vals, int thread_num);
     Internal_Node<K,V>* split_root(std::vector<K> &keys, std::vector<V> &Vals);
     Bin()
     {
@@ -21,15 +21,13 @@ public:
         size = 0;
     }
 
-    Node<K, V> *insert_leaf(K key, V value, leaf_node<K, V> *current_child);
+    Node<K, V> *insert_leaf(K key, V value, leaf_node<K, V> *current_child, int thread_num);
+    Node<K, V> *insert_internal(K key, V value, Internal_Node<K, V> *current_root, int thread_num);
+    Node<K, V> *remove_leaf(K key, leaf_node<K, V> *current_child,int thread_num);
 
-    Node<K, V> *insert_internal(K key, V value, Internal_Node<K, V> *current_root);
+    Node<K, V> *remove_internal(K key, Internal_Node<K, V> *current_root,int thread_num);
 
-    Node<K, V> *remove_leaf(K key, leaf_node<K, V> *current_child);
-
-    Node<K, V> *remove_internal(K key, Internal_Node<K, V> *current_root);
-
-    V search(K key);
+    V search(K key, int thread_num);
 
     int range_query(K key, int remaining, std::vector<std::pair<K, V>> &result) {
         int n = remaining;
@@ -51,29 +49,32 @@ public:
         return n;
 
     }
+
+
+
 };
 
 template<typename K, typename V>
-V Bin<K,V>::search(K key) {
+V Bin<K,V>::search(K key,int thread_num) {
     Node<K,V>* curr_root = (Node<K,V>*)unset_mark((long) root.load(std::memory_order_seq_cst));
     if(curr_root -> is_leaf)
-        return ((leaf_node<K,V>*) curr_root) -> data_array_list.search(key);
+        return ((leaf_node<K,V>*) curr_root) -> data_array_list.search(key,thread_num);
     Internal_Node<K,V>* node = (Internal_Node<K,V>*) curr_root;
     int ptr_idx = std::lower_bound(node->key.begin(), node->key.begin() + node->count, key) -
                   node->key.begin();
-    return node->ptr[ptr_idx]->data_array_list.search(key);
+    return node->ptr[ptr_idx]->data_array_list.search(key,thread_num);
 }
 
 
 template<typename K, typename V>
-bool Bin<K,V>::remove(K key) {
+bool Bin<K,V>::remove(K key,int thread_num) {
     retry:
     Node<K,V>* curr_root = root.load(std::memory_order_seq_cst);
     if(is_marked((uintptr_t) curr_root))
         return false;
     if(curr_root -> is_leaf)
     {
-        Node<K,V>* new_node = remove_leaf(key, (leaf_node<K,V>*) curr_root);
+        Node<K,V>* new_node = remove_leaf(key, (leaf_node<K,V>*) curr_root,  thread_num);
         if(new_node) {
             root.compare_exchange_strong(curr_root, new_node, std::memory_order_seq_cst, std::memory_order_seq_cst);
             goto retry;
@@ -83,7 +84,7 @@ bool Bin<K,V>::remove(K key) {
     }
     else
     {
-        Node<K,V>* new_node =  remove_internal(key, (Internal_Node<K,V>*)curr_root);
+        Node<K,V>* new_node =  remove_internal(key, (Internal_Node<K,V>*)curr_root,thread_num);
         if(new_node) {
             root.compare_exchange_strong(curr_root, new_node, std::memory_order_seq_cst, std::memory_order_seq_cst);
             goto retry;
@@ -94,13 +95,13 @@ bool Bin<K,V>::remove(K key) {
 }
 
 template<typename K, typename V>
-Node<K,V>* Bin<K,V>::remove_leaf(K key, leaf_node<K,V>* current_child) {
-    int res = current_child -> data_array_list.remove(key);
+Node<K,V>* Bin<K,V>::remove_leaf(K key, leaf_node<K,V>* current_child,int thread_num) {
+    int res = current_child -> data_array_list.remove(key,thread_num);
     if(res == -1)
     {
         std::vector<K> keys;
         std::vector<V> vals;
-        current_child -> data_array_list.collect(keys, vals);
+        current_child -> data_array_list.collect(keys, vals,thread_num);
         Node<K,V>* new_root = (Node<K,V>*)split_root(keys, vals);
         return new_root;
     }
@@ -111,26 +112,26 @@ Node<K,V>* Bin<K,V>::remove_leaf(K key, leaf_node<K,V>* current_child) {
 }
 
 template<typename K, typename V>
-void Bin<K,V>::collect(std::vector<K> &keys, std::vector<V> &Vals) {
+void Bin<K,V>::collect(std::vector<K> &keys, std::vector<V> &Vals, int thread_num) {
     Node<K,V>* curr_root = (Node<K,V>*)unset_mark((long) root.load(std::memory_order_seq_cst));
     for(int i = 0; i <= curr_root -> count; i++)
     {
         leaf_node<K,V>* curr_child = (leaf_node<K,V>*) ((Internal_Node<K,V>*)curr_root) ->ptr[i];
-        curr_child -> data_array_list.collect(keys, Vals);
+        curr_child -> data_array_list.collect(keys, Vals, thread_num);
     }
 }
 
 template<typename K, typename V>
-Node<K,V>* Bin<K,V>::remove_internal(K key, Internal_Node<K,V>* current_root) {
+Node<K,V>* Bin<K,V>::remove_internal(K key, Internal_Node<K,V>* current_root,int thread_num) {
     int ptr_idx = std::lower_bound(current_root->key.begin(), current_root->key.begin() + current_root->count, key) -
                   current_root->key.begin();
     leaf_node<K, V> *current_child = (leaf_node<K, V> *) current_root->ptr[ptr_idx];
-    int res = current_child->data_array_list.remove(key);
+    int res = current_child->data_array_list.remove(key,thread_num);
     if (res == -1) {
         if (current_root->count < root_max) {
             std::vector<K> keys;
             std::vector<V> vals;
-            current_child->data_array_list.collect(keys, vals);
+            current_child->data_array_list.collect(keys, vals,thread_num);
             Internal_Node<K, V> *new_root = split_root(keys, vals);
             Internal_Node<K, V> *new_root_node = new Internal_Node<K, V>();
             int i = 0;
@@ -193,15 +194,15 @@ Internal_Node<K,V>* Bin<K,V>::split_root(std::vector<K> &keys, std::vector<V> &v
 }
 
 template<typename K, typename V>
-Node<K,V>* Bin<K,V>::insert_leaf(K key, V value, leaf_node<K,V>* current_child) {
+Node<K,V>* Bin<K,V>::insert_leaf(K key, V value, leaf_node<K,V>* current_child, int thread_num) {
     if(current_child -> count < child_max)
     {
-        int res = current_child -> data_array_list.insert(key, value);
+        int res = current_child -> data_array_list.insert(key, value, thread_num);
         if(res == -1)
         {
             std::vector<K> keys;
             std::vector<V> vals;
-            current_child -> data_array_list.collect(keys, vals);
+            current_child -> data_array_list.collect(keys, vals,thread_num);
             Node<K,V>* new_root = (Node<K,V>*) split_root(keys, vals);
             return new_root;
         }
@@ -216,26 +217,26 @@ Node<K,V>* Bin<K,V>::insert_leaf(K key, V value, leaf_node<K,V>* current_child) 
     {
         std::vector<K> keys;
         std::vector<V> vals;
-        current_child -> data_array_list.collect(keys, vals);
+        current_child -> data_array_list.collect(keys, vals,thread_num);
         Node<K,V>* new_root = (Node<K,V>*)split_root(keys, vals);
         return new_root;
     }
 }
 
 template<typename K, typename V>
-Node<K,V>* Bin<K,V>::insert_internal(K key, V value, Internal_Node<K,V>* current_root)
+Node<K,V>* Bin<K,V>::insert_internal(K key, V value, Internal_Node<K,V>* current_root,int thread_num)
 {
     int ptr_idx = std::lower_bound(current_root -> key.begin(), current_root -> key.begin() + current_root -> count, key) - current_root -> key.begin();
     leaf_node<K,V>* current_child = (leaf_node<K,V>*) current_root -> ptr[ptr_idx];
     if(current_child -> count < child_max)
     {
-        int res = current_child -> data_array_list.insert(key, value);
+        int res = current_child -> data_array_list.insert(key, value,thread_num);
         if(res == -1 )
         {
             if(current_root -> count < root_max) {
                 std::vector<K> keys;
                 std::vector<V> vals;
-                current_child->data_array_list.collect(keys, vals);
+                current_child->data_array_list.collect(keys, vals,thread_num);
                 Internal_Node<K, V> *new_root = split_root(keys, vals);
                 Internal_Node<K,V>* new_root_node = new Internal_Node<K,V>();
                 int i = 0;
@@ -287,7 +288,7 @@ Node<K,V>* Bin<K,V>::insert_internal(K key, V value, Internal_Node<K,V>* current
     {
         std::vector<K> keys;
         std::vector<V> vals;
-        current_child->data_array_list.collect(keys, vals);
+        current_child->data_array_list.collect(keys, vals,thread_num);
         Internal_Node<K, V> *new_root = split_root(keys, vals);
         Internal_Node<K,V>* new_root_node = new Internal_Node<K,V>();
         int i = 0;
@@ -333,14 +334,14 @@ Node<K,V>* Bin<K,V>::insert_internal(K key, V value, Internal_Node<K,V>* current
 
 
 template<typename K, typename V>
-bool Bin<K,V>::insert(K key, V value) {
+bool Bin<K,V>::insert(K key, V value,int thread_num) {
     retry:
     Node<K,V>* curr_root = root.load(std::memory_order_seq_cst);
     if(is_marked((uintptr_t) curr_root))
         return false;
     if(curr_root -> is_leaf)
     {
-        Node<K,V>* new_node = insert_leaf(key, value, (leaf_node<K,V>*) curr_root);
+        Node<K,V>* new_node = insert_leaf(key, value, (leaf_node<K,V>*) curr_root, thread_num);
         if(new_node) {
             root.compare_exchange_strong(curr_root, new_node, std::memory_order_seq_cst, std::memory_order_seq_cst);
             goto retry;
@@ -350,7 +351,7 @@ bool Bin<K,V>::insert(K key, V value) {
     }
     else
     {
-        Node<K,V>* new_node =  insert_internal(key, value, (Internal_Node<K,V>*)curr_root);
+        Node<K,V>* new_node =  insert_internal(key, value, (Internal_Node<K,V>*)curr_root, thread_num);
         if(new_node) {
             root.compare_exchange_strong(curr_root, new_node, std::memory_order_seq_cst, std::memory_order_seq_cst);
             goto retry;

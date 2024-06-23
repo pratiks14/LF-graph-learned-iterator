@@ -6,11 +6,11 @@
 #include <random>
 #include<vector>
 #include<stdint.h>
+#include "../../snapcollector.h"
 //#include "VersionTracker/TrackerList.h"
 
 const int64_t child_max = 32;
 const int64_t root_max = 32;
-
 
 const int64_t MIN = 8;
 
@@ -141,5 +141,6 @@ long get_unmarked_ref(long w)
 }
 //
 //TrackerList version_tracker;
+
 
 #endif //UNTITLED_UTIL_H

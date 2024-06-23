@@ -2,6 +2,10 @@
 #define KANVA_KANVA_MODEL_IMPL_H
 #include "kanva_model.h"
 #include "../common/util.h"
+#include "../snapcollector.h"
+
+
+
 
 template<class key_t, class val_t>
 KanvaModel<key_t, val_t>::KanvaModel(){
@@ -168,7 +172,7 @@ int KanvaModel<key_t, val_t>::rangequery(const key_t &key, const int n,
 // ============================ search =====================
 
 template<class key_t, class val_t>
-val_t KanvaModel<key_t, val_t>::find_retrain(const key_t &key, val_t &val)
+val_t KanvaModel<key_t, val_t>::find_retrain(const key_t &key, val_t &val,int thread_num)
 {
     size_t pos = predict(key);
     pos = locate_in_levelbin(key, pos);
@@ -182,9 +186,9 @@ val_t KanvaModel<key_t, val_t>::find_retrain(const key_t &key, val_t &val)
 
     if(mob==nullptr) return -1;
     if(mob-> isbin)
-        return mob->mob.lflb->search(key);
+        return mob->mob.lflb->search(key,thread_num);
     else
-        return mob->mob.ai->find_retrain(key, val);
+        return mob->mob.ai->find_retrain(key, val,thread_num);
 }
 
 /**
@@ -196,12 +200,20 @@ val_t KanvaModel<key_t, val_t>::find_retrain(const key_t &key, val_t &val)
  * the caller should check if the node is marked or not
  */
 template<>
-Vnode<val_type>* KanvaModel<key_type, Vnode<val_type>*>::find_retrain(const key_type &key, Vnode<val_type>* &val)
+Vnode<val_type>* KanvaModel<key_type, Vnode<val_type>*>::find_retrain(const key_type &key, Vnode<val_type>* &val,int thread_num)
 {
     size_t pos = predict(key);
     pos = locate_in_levelbin(key, pos);
     if(key == keys[pos]){
-        return vals[pos];
+        Vnode<val_type>* temp = vals[pos];
+        if(is_marked_ref((long)temp->vnext.load())) {
+//            reportVertex(temp , thread_num , 1, nullptr, false);
+            return nullptr;
+        }
+        else
+        {
+            return temp;
+        }
     }
     int bin_pos = key<keys[pos]?pos:(pos+1);
     struct model_or_bin<key_type , Vnode<val_type>*>* mob;
@@ -209,9 +221,9 @@ Vnode<val_type>* KanvaModel<key_type, Vnode<val_type>*>::find_retrain(const key_
 
     if(mob==nullptr) return nullptr;
     if(mob-> isbin)
-        return mob->mob.lflb->search(key);
+        return mob->mob.lflb->search(key,thread_num);
     else
-        return mob->mob.ai->find_retrain(key, val);
+        return mob->mob.ai->find_retrain(key, val,thread_num);
 }
 
 
@@ -227,7 +239,7 @@ inline size_t KanvaModel<key_t, val_t>::predict(const key_t &key) {
 
 // =============================== insert =======================
 template<class key_t, class val_t>
-bool KanvaModel<key_t, val_t>::insert_retrain(const key_t &key, val_t val)
+bool KanvaModel<key_t, val_t>::insert_retrain(const key_t &key, val_t val, int thread_num)
 {
     size_t pos = predict(key);
     pos = locate_in_levelbin(key, pos);
@@ -247,15 +259,17 @@ bool KanvaModel<key_t, val_t>::insert_retrain(const key_t &key, val_t val)
     return insert_model_or_bin(key, val, bin_pos);
 }
 template<>
-bool KanvaModel<key_type, Vnode<val_type>*>::insert_retrain(const key_type &key, Vnode<val_type>* val)
+bool KanvaModel<key_type, Vnode<val_type>*>::insert_retrain(const key_type &key, Vnode<val_type>* val, int thread_num)
 {
     size_t pos = predict(key);
     pos = locate_in_levelbin(key, pos);
 
     if(key == keys[pos]){
         Vnode<val_type>* temp = vals[pos];
-        if(!is_marked_ref((long)temp->vnext.load()))
+        if(is_marked_ref((long)temp->vnext.load())) {
+//            reportVertex(temp , thread_num , 1, nullptr, false);
             return false;
+        }
         else
         {
             //update the value
@@ -267,12 +281,12 @@ bool KanvaModel<key_type, Vnode<val_type>*>::insert_retrain(const key_type &key,
 
     int bin_pos = pos;
     bin_pos = key<keys[bin_pos]?bin_pos:(bin_pos+1);
-    return insert_model_or_bin(key, val, bin_pos);
+    return insert_model_or_bin(key, val, bin_pos,thread_num);
 }
 
 
 template<class key_t, class val_t>
-bool KanvaModel<key_t, val_t>::insert_model_or_bin(const key_t &key, const val_t &val, size_t bin_pos)
+bool KanvaModel<key_t, val_t>::insert_model_or_bin(const key_t &key, const val_t &val, size_t bin_pos,int thread_num )
 {
     struct model_or_bin<key_t, val_t> *mob = mobs_lf[bin_pos];
     retry:
@@ -288,11 +302,11 @@ bool KanvaModel<key_t, val_t>::insert_model_or_bin(const key_t &key, const val_t
     }
     assert(mob!=nullptr);
     if(mob->isbin) {           // insert into bin
-        bool res = mob->mob.lflb->insert(key, val);
+        bool res = mob->mob.lflb->insert(key , val , thread_num);
         if(!res){
             std::vector<key_t> retrain_keys;
             std::vector<val_t> retrain_vals;
-            mob->mob.lflb->collect(retrain_keys, retrain_vals);
+            mob->mob.lflb->collect(retrain_keys, retrain_vals,thread_num);
             lrmodel_type model;
             model.train(retrain_keys.begin(), retrain_keys.size());
             size_t err = model.get_maxErr();
@@ -304,32 +318,32 @@ bool KanvaModel<key_t, val_t>::insert_model_or_bin(const key_t &key, const val_t
                 delete new_mob;
                 goto retry;
             }
-            res = ai->insert_retrain(key, val);
+            res = ai->insert_retrain(key, val,thread_num);
             return res;
         }
         else
             return res;
     } else{                   // insert into model
-        return mob->mob.ai->insert_retrain(key, val);
+        return mob->mob.ai->insert_retrain(key, val, thread_num);
     }
 }
 
 // ========================== remove =====================
 template<class key_t, class val_t>
-bool KanvaModel<key_t, val_t>::remove(const key_t &key)
+bool KanvaModel<key_t, val_t>::remove(const key_t &key,int thread_num)
 {
     size_t pos = predict(key);
-    pos = locate_in_levelbin(key, pos);
+    pos = locate_in_levelbin(key, pos,thread_num);
     if (key == keys[pos]) {
         vals[pos] = -1;
         return true;
     }
     int bin_pos = key<keys[pos]?pos:(pos+1);
-    return remove_model_or_bin(key, bin_pos);
+    return remove_model_or_bin(key, bin_pos,thread_num);
 }
 
 template<>
-bool KanvaModel<key_type , Vnode<val_type>*>::remove(const key_type &key)
+bool KanvaModel<key_type , Vnode<val_type>*>::remove(const key_type &key,int thread_num)
 {
     size_t pos = predict(key);
     pos = locate_in_levelbin(key, pos);
@@ -337,30 +351,31 @@ bool KanvaModel<key_type , Vnode<val_type>*>::remove(const key_type &key)
         //mark the vnect of node
         Vnode<val_type>* vnode = vals[pos].load();
         Vnode<val_type > *tmp = end_Vnode_T;
-        if(!vnode->vnext.compare_exchange_strong(tmp, (Vnode<val_type>*)set_mark((long) end_Vnode_T)))
-            return false;
-        return true;
+        int ret = vnode->vnext.compare_exchange_strong(tmp, (Vnode<val_type>*)set_mark((long) end_Vnode_T));
+//        reportVertex(tmp , thread_num , 1, nullptr, false);
+        return ret;
+
     }
     int bin_pos = key<keys[pos]?pos:(pos+1);
-    return remove_model_or_bin(key, bin_pos);
+    return remove_model_or_bin(key, bin_pos,thread_num);
 }
 
 template<class key_t, class val_t>
-bool KanvaModel<key_t, val_t>::remove_model_or_bin(const key_t &key, const int bin_pos)
+bool KanvaModel<key_t, val_t>::remove_model_or_bin(const key_t &key, const int bin_pos,int thread_num)
 {
     retry:
     struct model_or_bin<key_t, val_t>* mob = mobs_lf[bin_pos];
     if(mob==nullptr) return false;
     if (mob->isbin) {
         int res;
-        res = mob->mob.lflb->remove(key);
+        res = mob->mob.lflb->remove(key,thread_num);
         if(res == -2)
             return false;
         else if(res == -1)
         {
             std::vector<key_t> retrain_keys;
             std::vector<val_t> retrain_vals;
-            mob->mob.lflb->collect(retrain_keys, retrain_vals);
+            mob->mob.lflb->collect(retrain_keys, retrain_vals,thread_num);
             lrmodel_type model;
             model.train(retrain_keys.begin(), retrain_keys.size());
             size_t err = model.get_maxErr();
@@ -372,12 +387,12 @@ bool KanvaModel<key_t, val_t>::remove_model_or_bin(const key_t &key, const int b
                 delete new_mob;
                 goto retry;
             }
-            return ai->remove(key);
+            return ai->remove(key,thread_num);
         }
         else
             return true;
     } else {
-        return mob->mob.ai->remove(key);
+        return mob->mob.ai->remove(key,thread_num);
     }
 }
 

@@ -1,3 +1,7 @@
+#ifndef SNAPCOLLECTOR_HEADER_H
+#define SNAPCOLLECTOR_HEADER_H
+
+
 
 #include "graphDS.h"
 #include <vector>
@@ -9,10 +13,17 @@
 #include <chrono>
 #include "Kanva_impl/kanva.h"
 #include "Kanva_impl/kanva_impl.h"
+#include "Kanva_impl/kanva_model_impl.h"
+#include "Kanva_impl/kanva_model.h"
+#include "Kanva_impl/Bin_LL/LF_LL.h"
+
 using namespace std;
 
+//template<class key_t, class val_t>
+//class Kanva;
 
-class SnapCollector;
+//class SnapCollector;
+
 
 atomic<SnapCollector *> PSC = {nullptr};
 //int total_threads = 16;
@@ -1488,9 +1499,9 @@ SnapCollector *takeSnapshot(Kanva<key_type, Vnode<val_type> *> *km, int max_thre
  * @param tid 
  * @param action insert->2/delete->1/block->3
  */
-void reportVertex(Vnode<val_type> *victim,int tid, int action, fstream * logfile, bool debug){
-    if(debug)
-        (*logfile) << "Report vertex : " << victim->val <<" action " << action<< endl;   
+void reportVertex(Vnode<val_type> *victim,int tid, int action){
+//    if(debug)
+//        (*logfile) << "Report vertex : " << victim->val <<" action " << action<< endl;
 
     SnapCollector * SC = PSC;
     if(SC != nullptr and SC->isActive()) {
@@ -1504,10 +1515,10 @@ void reportVertex(Vnode<val_type> *victim,int tid, int action, fstream * logfile
         if (vreport_head != nullptr && vreport_head->action == 3){
            return;
         }
-            
-        
-        if(atomic_compare_exchange_strong(&SC->reports[tid]->head_vertex_report, &vreport_head, rep) and debug)
-            (*logfile) << "Added Vertex Report " << victim ->val <<" action " << action << endl;
+
+        bool resp = atomic_compare_exchange_strong(&SC->reports[tid]->head_vertex_report, &vreport_head, rep);
+//        if(resp  and debug)
+//            (*logfile) << "Added Vertex Report " << victim ->val <<" action " << action << endl;
     }
 }
 
@@ -1537,3 +1548,7 @@ void reportEdge(Enode<val_type> *victim, Vnode <val_type> * source_enode, int ti
             (*logfile) << "Added Edge report " << source_enode->val<<" " << victim->val << " action : " << action<<endl;
     }
 }
+
+
+
+#endif

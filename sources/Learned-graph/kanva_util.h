@@ -96,7 +96,7 @@ Kanva<key_type ,Vnode<val_type>*> * create_kanva_model(vector<key_type > &vertic
     prepare(km, vertices, values);
 //    std::cout << "Training done\n";
     for(pair<key_type, key_type > edge : edges){
-        km->AddEdge(edge.first, edge.second, 0, NULL, false);
+        km->AddEdge(edge.first, edge.second, 0, NULL, false,0);
     }
 
 

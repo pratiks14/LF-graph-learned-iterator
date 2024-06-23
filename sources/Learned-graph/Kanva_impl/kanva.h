@@ -25,15 +25,16 @@ public:
     int rangequery(const key_t &key, const int n, std::vector<std::pair<key_t, val_t>> &result);
 
 
-    inline val_t find(const key_t &key, val_t &val);
-    inline bool insert(const key_t &key, const val_t &val);
-    inline bool remove(const key_t &key);
-    bool fetch_vertices(val_t  *n1, val_t *n2, key_t key1, key_t key2);
-    bool fetch_vertices_help(val_t *n1, val_t *n2, key_t key1, key_t key2);
-    int ContainsE(key_t key1, key_t key2, int tid, fstream *logfile, bool debug);
-    int AddEdge(key_t key1, key_t key2, int tid, fstream *logfile, bool debug);
-    void locateE(Vnode<val_type> **source_of_edge, Enode<val_type> **n1, Enode<val_type> **n2, int key, int tid, fstream *logfile, bool debug);
-    int RemoveE(key_t key1, key_t key2, int tid, fstream *logfile, bool debug);
+    inline val_t find(const key_t &key, val_t &val, int thread_num);
+
+    bool insert(const key_t &key, const val_t &val, int thread_num);
+    inline bool remove(const key_t &key,int thread_num);
+    bool fetch_vertices(val_t  *n1, val_t *n2, key_t key1, key_t key2,int thread_num);
+    bool fetch_vertices_help(val_t *n1, val_t *n2, key_t key1, key_t key2,int thread_nun);
+    int ContainsE(key_t key1, key_t key2, int tid, fstream *logfile, bool debug,int thread_num);
+    int AddEdge(key_t key1, key_t key2, int tid, fstream *logfile, bool debug,int thread_num);
+    void locateE(Vnode<val_type> **source_of_edge, Enode<val_type> **n1, Enode<val_type> **n2, int key, int tid, fstream *logfile, bool debug,int thread_num);
+    int RemoveE(key_t key1, key_t key2, int tid, fstream *logfile, bool debug,int thread_num);
     size_t model_size();
     vector<key_type> get_keys();
     vector<kanvamodel_type> get_aimodels();
@@ -55,6 +56,7 @@ private:
     int maxErr = 64;
     int learning_step = 1000;
     float learning_rate = 0.1;
+
 };
 
 
