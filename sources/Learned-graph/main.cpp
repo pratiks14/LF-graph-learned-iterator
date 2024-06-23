@@ -155,13 +155,21 @@ void *thread_funct(void * t_args){
         switch(op_index) {
         case 0://add vertex
             {
-                int rand_node_id = rand() % max_nodes + 1;
+                key_type rand_node_id = rand() % max_nodes + 1;
                 if(debug)
                     logfile_th << " thread id : " << thread_num << "Add vertex  : " << rand_node_id << endl;
                 chrono::high_resolution_clock::time_point startT = chrono::high_resolution_clock::now();
                 Enode<key_type> * EHead = new Enode<key_type>(0, NULL,end_Enode_T);
-                Vnode<val_type> *v = new Vnode<val_type>(5, end_Vnode_T, EHead);
-                int ret = graph->insert(5, v);
+                Vnode<val_type> *v = new Vnode<val_type>(rand_node_id, end_Vnode_T, EHead);
+                bool ret = graph->insert(rand_node_id, v);
+                if(debug){
+                    if(ret)
+                        (logfile_th) << "Kye " << rand_node_id << " added !!" << endl;
+                    else
+                        (logfile_th) << "Kye " << rand_node_id << " added !!" << endl;
+                }
+
+
                 chrono::high_resolution_clock::time_point endT = chrono::high_resolution_clock::now();
                 double timeTaken = chrono::duration_cast<chrono::microseconds>(endT-startT).count() ;
 
@@ -176,7 +184,7 @@ void *thread_funct(void * t_args){
         case 1:
             // delete vertex
             {
-                int rand_node_id = rand() % max_nodes + 1;
+                key_type rand_node_id = rand() % max_nodes + 1;
                 if(debug)
                     logfile_th << " thread id : " << thread_num << "Delete vertex : " << rand_node_id << endl;
                 chrono::high_resolution_clock::time_point startT = chrono::high_resolution_clock::now();
@@ -195,8 +203,8 @@ void *thread_funct(void * t_args){
         case 2:
             // add edge
             {
-                int rand_source = rand() % max_nodes + 1;
-                int rand_dest = rand() % max_nodes + 1;
+                key_type rand_source = rand() % max_nodes + 1;
+                key_type rand_dest = rand() % max_nodes + 1;
                 while(rand_dest == rand_source){
                     rand_dest = rand() % max_nodes + 1;
                 }
@@ -218,8 +226,9 @@ void *thread_funct(void * t_args){
             break;
         case 3:
             //delete edge
-            {   int rand_source = rand() % max_nodes + 1;
-                int rand_dest = rand() % max_nodes + 1;
+            {
+                key_type rand_source = rand() % max_nodes + 1;
+                key_type rand_dest = rand() % max_nodes + 1;
                 while(rand_dest == rand_source){
                     rand_dest = rand() % max_nodes + 1;
                 }
@@ -240,8 +249,9 @@ void *thread_funct(void * t_args){
             break;
         case 4:
             //contains edge
-            {   int rand_source = rand() % max_nodes + 1;
-                int rand_dest = rand() % max_nodes + 1;
+            {
+                key_type rand_source = rand() % max_nodes + 1;
+                key_type rand_dest = rand() % max_nodes + 1;
                 while(rand_dest == rand_source){
                     rand_dest = rand() % max_nodes + 1;
                 }
@@ -262,7 +272,8 @@ void *thread_funct(void * t_args){
             break;
         case 5:
             //contains vertex
-            {   int node_id = rand() % max_nodes + 1;
+            {
+                key_type node_id = rand() % max_nodes + 1;
 
                 if(debug)
                     logfile_th << " thread id : " << thread_num << " Contains vertex : " << node_id  << endl;
@@ -537,6 +548,7 @@ int main(int argc, char** argv) {
     //find Node in Learned graph
 
 
+
 //    SnapCollector *sc = takeSnapshot(km, 10, nullptr, debug, 1);
 
     //sc->print_snap_graph(&logfile);
@@ -601,65 +613,118 @@ int main(int argc, char** argv) {
 }
 
 
+
 /*
  * test main()
  * {
- * key_type dummy_key = 11095;
-    Vnode<val_type > * dummy_n= nullptr;
-    Vnode<val_type> * node = km->find(dummy_key, dummy_n);
-    if (node != nullptr)
-        cout << "Node not found in learned graph : " << node->val << endl;
-    else
-        cout << "Node  found in learned graph" << endl;
+ * k /////////////////
+    fstream logfile_th;
+    if(debug){
+        logFileName = logFileName  +".txt";
+        logfile_th.open(logFileName,ios::out);
+    }
+    key_type dummy_key = 1;
+    //Vnode<val_type> *dummy_n = nullptr;
+    //Vnode<val_type> *node = km->find(dummy_key, dummy_n);
+    //if (node != nullptr)
+    //    cout << "Node not found in learned graph : " << node->val << endl;
+    //else
+    //    cout << "Node  found in learned graph" << endl;
 
-    //Insertion into Kanva Model
-    dummy_key = 11095;
-    Enode<key_type> * EHead = new Enode<key_type>(0, NULL,end_Enode_T);
-    Vnode<val_type> *v = new Vnode<val_type>(dummy_key,end_Vnode_T, EHead);
-    bool ret = km->insert(dummy_key, v);
+    //// Insertion into Kanva Model
+    //dummy_key = 11095;
+    //Enode<key_type> *EHead = new Enode<key_type>(0, NULL, end_Enode_T);
+    //Vnode<val_type> *v = new Vnode<val_type>(dummy_key, end_Vnode_T, EHead);
+    //bool ret = km->insert(dummy_key, v);
 
+    //if (ret)
+    //    cout << "Node inserted into Kanva Model" << endl;
 
-    if(ret)
-        cout << "Node inserted into Kanva Model" << endl;
-
+    int ret = km->remove(dummy_key);
+    if (ret)
+        std::cout << "Node "<< dummy_key <<" removed from Kanva Model" << std::endl;
+    dummy_key = 3;
     ret = km->remove(dummy_key);
-    if(ret)
-        std::cout<< "Node removed from Kanva Model" << std::endl;
+    if (ret)
+        std::cout << "Node " << dummy_key << " removed from Kanva Model" << std::endl;
+    dummy_key = 129;
+    ret = km->remove(dummy_key);
+    if (ret)
+        std::cout << "Node " << dummy_key << " removed from Kanva Model" << std::endl;ret = km->remove(dummy_key);
 
+    dummy_key = 2;
+    ret = km->remove(dummy_key);
+    if (ret)
+        std::cout << "Node " << dummy_key << " removed from Kanva Model" << std::endl;
+    else
+        std::cout << "Node " << dummy_key << " not removed from Kanva Model " << std::endl;
 
-    //insert edge
-    v = new Vnode<val_type>(5, end_Vnode_T, EHead);
-    ret = km->insert(5, v);
-    if(ret)
-        cout << "Vertex "<<5 <<"inserted in Kanva Model" << endl;
-    v = new Vnode<val_type>(4, end_Vnode_T, EHead);
-    ret = km->insert(4, v);
-    if(ret)
-        cout << "Vertex "<<4 <<"inserted in Kanva Model" << endl;
+    SnapCollector *sc = takeSnapshot(km, 10, &logfile_th, debug, 1);
 
-    v = new Vnode<val_type>(7, end_Vnode_T, EHead);
-    ret = km->insert(7, v);
+    sc->print_snap_graph(&logfile_th);
+
+    dummy_key = 100;
+    Enode<key_type> *EHead = new Enode<key_type>(0, NULL, end_Enode_T);
+    Vnode<val_type> *v = new Vnode<val_type>(dummy_key, end_Vnode_T, EHead);
+    ret = km->insert(dummy_key , v);
     if(ret)
-        cout << "Vertex "<<7 <<"inserted in Kanva Model" << endl;
-    int ret2 = km->AddEdge(5,4,1, nullptr,false);
+        cout << "Node " << dummy_key << " inserted to Kanva Model" << endl;
+
+    dummy_key = 102;
+    EHead = new Enode<key_type>(0, NULL, end_Enode_T);
+    v = new Vnode<val_type>(dummy_key, end_Vnode_T, EHead);
+    ret = km->insert(dummy_key , v);
+    if(ret)
+        cout << "Node " << dummy_key << " inserted to Kanva Model" << endl;
+
+    int ret2 = km->AddEdge(100, 102, 1, nullptr, false);
+    if (ret2 == 3)
+        cout << "Edge added in 100-102 Kanva Model" << endl;
+
+    ret2 = km->RemoveE(100, 102,1, nullptr,false);
     if(ret2 == 3)
-        cout << "Edge added in 5-4 Kanva Model" << endl;
-    ret2 = km->AddEdge(5,7,1, nullptr,false);
-    if(ret2 == 3)
-        cout << "Edge added in 5-7Kanva Model" << endl;
-    //search edge
+        cout << "Edge removed from Kanva Model" << endl;
 
-    int ret1 = km->ContainsE(5,4,1, nullptr,false);
-    if(ret1 == 2)
-        cout << "Edge found in Kanva Model" << endl;
+    sc = takeSnapshot(km, 10, &logfile_th, debug, 1);
 
-//    ret1 = km->RemoveE(5,4,1, nullptr,false);
-//    if(ret1 == 3)
-//        cout << "Edge removed from Kanva Model" << endl;
+    sc->print_snap_graph(&logfile_th);
 
-    ret1 = km->ContainsE(5,4,1, nullptr,false);
-    if(ret1==3)
-        cout<< "Edge not found in Kanva Model" << endl;
+    // insert edge
+    //v = new Vnode<val_type>(5, end_Vnode_T, EHead);
+    //ret = km->insert(5, v);
+    //if (ret)
+    //    cout << "Vertex " << 5 << "inserted in Kanva Model" << endl;
+    //v = new Vnode<val_type>(4, end_Vnode_T, EHead);
+    //ret = km->insert(4, v);
+    //if (ret)
+    //    cout << "Vertex " << 4 << "inserted in Kanva Model" << endl;
+
+    //v = new Vnode<val_type>(7, end_Vnode_T, EHead);
+    //ret = km->insert(7, v);
+    //if (ret)
+    //    cout << "Vertex " << 7 << "inserted in Kanva Model" << endl;
+    //int ret2 = km->AddEdge(5, 4, 1, nullptr, false);
+    //if (ret2 == 3)
+    //    cout << "Edge added in 5-4 Kanva Model" << endl;
+    //ret2 = km->AddEdge(5, 7, 1, nullptr, false);
+    //if (ret2 == 3)
+    //    cout << "Edge added in 5-7Kanva Model" << endl;
+    //// search edge
+
+    //int ret1 = km->ContainsE(5, 4, 1, nullptr, false);
+    //if (ret1 == 2)
+    //    cout << "Edge found in Kanva Model" << endl;
+
+    ////    ret1 = km->RemoveE(5,4,1, nullptr,false);
+    ////    if(ret1 == 3)
+    ////        cout << "Edge removed from Kanva Model" << endl;
+
+    //ret1 = km->ContainsE(5, 4, 1, nullptr, false);
+    //if (ret1 == 3)
+    //    cout << "Edge not found in Kanva Model" << endl;
+
+    //////////////////
+
 }
  */
 

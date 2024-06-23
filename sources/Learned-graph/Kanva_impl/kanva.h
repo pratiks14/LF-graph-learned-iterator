@@ -26,7 +26,6 @@ public:
 
 
     inline val_t find(const key_t &key, val_t &val);
-    inline val_t find_help(const key_t &key, val_t &val);
     inline bool insert(const key_t &key, const val_t &val);
     inline bool remove(const key_t &key);
     bool fetch_vertices(val_t  *n1, val_t *n2, key_t key1, key_t key2);

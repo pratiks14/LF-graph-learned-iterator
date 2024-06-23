@@ -168,11 +168,7 @@ inline val_t Kanva<key_t, val_t>::find(const key_t &key, val_t &val)
       return find_model(key)[0].find_retrain(key, val);
 }
 
-template<class key_t, class val_t>
-inline val_t Kanva<key_t, val_t>::find_help(const key_t &key, val_t &val)
-{
-    return find_model(key)[0].find_retrain_help(key, val);
-}
+
 
 
 
@@ -252,7 +248,7 @@ bool Kanva<key_t, val_t>::fetch_vertices_help(val_t *n1, val_t *n2, key_t key1, 
 {
 
     val_t tmp; // will not be uused should be removed later
-    val_t node = find_help(key1, tmp);
+    val_t node = find(key1, tmp);
 
     if constexpr (std::is_pointer_v<val_t>)
     {
@@ -266,7 +262,7 @@ bool Kanva<key_t, val_t>::fetch_vertices_help(val_t *n1, val_t *n2, key_t key1, 
 
     *n1 = node;
 
-    node = find_help(key2, tmp);
+    node = find(key2, tmp);
     if constexpr (std::is_pointer_v<val_t>)
     {
         if (node == nullptr)

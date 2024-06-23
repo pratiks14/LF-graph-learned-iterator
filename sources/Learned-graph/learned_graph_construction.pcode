@@ -41,9 +41,10 @@ int addLL(lln , aimodel_status,&local_tail , &find_key)
             while(find_key < node->key) //means the node is not updated in prev if condition
             {
                 if (local_tail != nullptr)
-                    cas(local_tail->next , snap_End_Vnode , node);
-                cas(aimodel_status.tail , local_tail , node);
-                ret = update_local_tail(aimodel_status , local_tail , find_ke,local_tail , find_key)
+                    ret = cas(local_tail->next , snap_End_Vnode , node);
+                if ret or local_tail=null
+                    cas(aimodel_status.tail , local_tail , node);
+                ret = update_local_tail(aimodel_status , local_tail , find_ke,local_tail , find_key)#helping
                 if ret == -1
                     return -1
             }
@@ -122,8 +123,9 @@ func process_mobs(mobs_lf, aimodel_status,&local_tail, &find_key){
                 while(find_key < node->key) //means the node is not updated in prev if condition
                 {
                     if (local_tail != nullptr)
-                        cas(local_tail->next , snap_End_Vnode , node);
-                    cas(aimodel_status.tail , local_tail , node);
+                        ret = cas(local_tail->next , snap_End_Vnode , node);
+                    if ret or local_tail=null
+                        cas(aimodel_status.tail , local_tail , node);
                     ret = update_local_tail(aimodel_status , local_tail , find_ke,local_tail , find_key)
                     if ret == -1
                         return -1

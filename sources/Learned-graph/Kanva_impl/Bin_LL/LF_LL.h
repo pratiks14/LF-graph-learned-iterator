@@ -34,7 +34,7 @@ public:
     int insert(K Key, V value, int tid, int phase);
 
     V search(K key);
-    V search_help(K key);
+
 
     void collect(std::vector<K> &, std::vector<V> &);
 
@@ -117,49 +117,12 @@ Vnode<val_type> *Linked_List<key_type, Vnode<val_type> *>::search(val_type key)
     while (curr->key < key)
         curr = (ll_Node<val_type, Vnode<val_type> *> *)unset_freeze_mark((uintptr_t)curr->next.load(std::memory_order_seq_cst));
 
-    if (curr->key == key)
+    if (curr->key == key and !is_marked_ref((long)curr->next.load(std::memory_order_seq_cst)))
         return curr->value;
     else
         return nullptr;
 }
 
-//simillar to search above with deletion of marked nodes
-template <>
-Vnode<val_type> *Linked_List<key_type, Vnode<val_type> *>::search_help(val_type key )
-{
-    ll_Node<val_type, Vnode<val_type> *> *curr;
-retry:
-    while (true)
-    {
-        curr = head;
-        ll_Node<val_type, Vnode<val_type> *>  *right_node;
-        right_node = (ll_Node<val_type, Vnode<val_type> *> *)unset_freeze_mark((long)(curr)->next.load(std::memory_order_seq_cst));//head is not marked but freeze
-        while (true)
-        {
-            ll_Node<val_type, Vnode<val_type> *> *right_next = right_node->next.load(std::memory_order_seq_cst);
-            while (is_marked_ref((long)right_next))
-            {
-                // reportVertex(right_node , tid , 1, logfile,debug);//
-                if (!(curr->next.compare_exchange_strong(right_node, (ll_Node<val_type, Vnode<val_type> *>
-                                                                          *)get_unmarked_ref((long)right_next))))
-                {
-                    goto retry;
-                }
-                else
-                {
-                    right_node = (ll_Node<val_type, Vnode<val_type> *> *)unset_freeze_mark((long)right_next);
-                    right_next = right_node->next.load(std::memory_order_seq_cst);
-                }
-            }
-            if (right_node->key > key)
-                return nullptr;
-            else if (right_node->key == key)
-                return right_node->value;
-            curr = right_node;
-            right_node = (ll_Node<val_type, Vnode<val_type> *> *)get_unmarked_ref((long)right_next);
-        }
-    }
-}
 
 // template<typename K, typename V>
 // ll_Node<K,V>* Linked_List<K,V>::find(K key) {
@@ -276,9 +239,8 @@ int Linked_List<K, V>::insert(K key, V value)
                 return 1;
             }
             else
-            {
                 delete new_node;
-            }
+
         }
     }
 }
@@ -310,6 +272,7 @@ int Linked_List<key_type, Vnode<val_type> *>::insert(key_type key, Vnode<val_typ
             }
             else
                 delete new_node;
+
         }
     }
 }

@@ -40,7 +40,6 @@ public:
     int rangequery(const key_t &key, const int n, std::vector<std::pair<key_t, val_t>> &result);
 
     val_t find_retrain(const key_t &key, val_t &val);
-    val_t find_retrain_help(const key_t &key, val_t &val);
     bool insert_retrain(const key_t &key, val_t val);
     bool remove(const key_t &key);
     key_t get_keys(int i);
