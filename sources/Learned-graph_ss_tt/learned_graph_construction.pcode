@@ -1,0 +1,209 @@
+
+class aimodel_status{
+	atomic Vnode* head *
+	atomic Vnode tail *
+	atomic<int> status
+    atomic Vnode* last_updated_node
+}//done
+
+
+int update_local_tail(aimodel_status , &local_tail , &find_key){
+    local_tail = aimodel_status.tail
+    if local_tail != nil{
+        if unmarked(local_tail.next) != snap_End_Vnode{
+            prev_tail = local_tail
+            local_tail = prev_tail.next
+            cas(aimodel_status.tail , prev_tail , local_tail);
+        }
+        if local_tail.next = marked(snap_End_Vnode)
+            cas(aimodel_status.status , 1, 2  )                                                                     )
+            return -1
+        else
+            find_key = local_tail.key
+    }
+    return 1;
+}
+
+int addLL(lln , aimodel_status,&local_tail , &find_key)
+    curr_n = get_unmarked_unfreez(lln.head->next);
+
+    while curr_n-> key != std::numeric_limits<K>::max():
+        while (is_marked_ref((long)curr_n->value->vnext))
+            curr_n = get_unmarked_unfreez(curr_n ->next)
+        if curr_n->key > find_key :
+            node = new SnapVnode()
+            tmp_head = nullptr;
+            if local_tail == nullptr
+            {
+                head_up = cas(aimodel_status.head , tmp_head , node);
+            }
+            //while loop is required as it moves on to the next node and there is a possibility that the node is not added to the list
+            while(find_key < node->key) //means the node is not updated in prev if condition
+            {
+                if (local_tail != nullptr)
+                    ret = cas(local_tail->next , snap_End_Vnode , node);
+                    if ret : 
+                        cas(aim_stat->tail , local_tail , node)
+                else
+                    if head_up:
+                        cas(aim_stat->tail, nullptr , node)
+                    else
+                        cas(aim_stat->tail , nullptr , tmp_head)
+                
+                ret = update_local_tail(aimodel_status , local_tail , find_ke,local_tail , find_key)#helping
+                if ret == -1
+                    return -1
+            }
+        curr_n =  get_unmarked_unfreez(curr_n ->next)
+    return 1
+
+func process_mobs(mobs_lf, aimodel_status,&local_tail, &find_key){
+    if aimodel_status.status !=2{
+      if mobs_lf.is_bin {
+            // it can be leaf node or an internal node
+            Node current_root = unmarked(mobs->mob.lflb->root)
+            if current_root.isinternal(){
+                int cnt = current_root->count
+                pos = current_root->find_pos(find_key)
+                for i = pos to cnt-1{
+                    if current_root->key < find_key
+                        continue
+                    //process the linked list of leaf nodes
+                    leaf_node lf_n = current_root->ptr[i]
+                    LLnodes lln = lf_n->dataarraylist
+                    ret = addLL(lln ,  aimodel_status,local_tail , find_key)
+                    if ret == -1
+                        return -1
+
+                }
+                leaf_node lg_n = current_root->ptr[cnt-1]
+                LLnode lln = lf_n->dataarraylist
+                ret = addLL(lln ,  aimodel_status,local_tail , find_key)
+                if ret == -1
+                    return -1
+            }
+            else{
+                LLnode lln = current_root->dataarraylist
+                ret = addLL(lln ,  aimodel_status,local_tail , find_key)
+                if ret == -1
+                    return -1
+            }
+        }
+        else{
+            kanva_model_type kmt = mobs->mob.ai
+            ret = kanva_model_iterator(kmt , aimodel_status , local_tail , find_key,false)
+            if ret = -1
+                return -1
+        }
+    }
+    else 
+        return  -1
+}
+
+
+
+
+ //this will be called for each ai model of Main Kanva class
+ func kanva_model_iterator(aimodel , aimodel_status , &local_tail ,find_key,isfirst ){
+    
+    if aimodel_status.status !=2{
+         //only in kanva model case
+        //iterate over bins and values one after another
+        pos = aimodel->find_pos(find_key)
+        for(int i = pos; i < aimodel.values.size(); i++){
+            if(mobs_lf[i] != nullptr and aimodel.keys[i]> find_key){
+                ret = process_mobs(mobs_lf[i], aimodel_status, local_tail, find_key);
+                if ret == -1
+                    return -1
+            }
+
+            Vnode * node = aimodel.vals[i];
+            //add the node
+            if(node->vnext is not marked and node-> key > find_key)
+            {
+                node = new SnapVnode()
+                tmp_head = aimodel_status.head;
+                head_up = false
+                if tmp_head == nullptr
+                {
+                    head_up = cas(aimodel_status.head , tmp_head , node);
+                }
+                //while loop is required as it moves on to the next node and there is a possibility that the node is not added to the list
+                while(find_key < node->key) //means the node is not updated in prev if condition
+                {
+                    if (local_tail != nullptr)
+                        ret = cas(local_tail->next , snap_End_Vnode , node);
+                        if ret :
+                            cas(aim_stat->tail , local_tail , node)
+                    else local_tail=null
+                        if head_up
+                            cas(aimodel_status.tail , null , node);
+                        else
+                            cas(aimodel_status.tail , null , tmp_head)
+
+                    ret = update_local_tail(aimodel_status , local_tail , find_ke,local_tail , find_key)
+                    if ret == -1
+                        return -1
+                }
+            }
+        }
+
+        //check last bin
+        if(mobs_lf[aimodel.values.size()] != nullptr)
+            ret = process_mobs(mobs_lf[aimodel.values.size()], aimodel_status);
+            if ret == -1
+                return -1
+
+
+
+        
+        //end of kanvamodel
+        if(isfirst)
+            local_tail = aim_stat->tail
+            if local_tail != nullptr #all nodes are marked for this particular ai model
+                tmp = snap_End_Vnode;
+                while(cas(local_tail->next ,snap_End_Vnode  , marked(snap_End_Vnode)))
+                    local_tail = tmp;
+
+            cas(aimodel_status.status , 1, 2);
+            
+    }
+    else 
+        return -1
+
+ }
+
+
+//in main iterator function
+
+atomic<aimodel_status> * counter = new atomic<aimodel_status>(0);
+
+//ist iteration
+for i,aimodel in kanva.aimodels{
+    local_tail = nullptr
+    find_key = 0
+    if(cas(aimodel_status[i].status , 0,1))
+	    kanva_model_iterator(aimodel , aimodel_status[i],local_tail , find_key,true) 
+}
+
+
+2nd iteration
+for i,aimodel in kanva.aimodels{
+
+    
+    if(aimodel_status[i].status != 2){
+        local_tail = aimodel_status[i]->tail    
+        if local_tail!= null
+            find_key = local_tail->val
+        cas(aimodel_status[i].status , 0,1);
+        kanva_model_iterator(aimodel , aimodel_status[i],local_tail , find_key,true)
+    } 
+}
+curr_snap_vnode = snapVnode_head
+for i,aimodel in kanva.aimodels:
+    
+    if aimodel_status[i].head != nullptr 
+        curr_snap_vnode->vnext = aimodel_status[i].head
+        curr_snap_vnode = aimodel_status[i].tail
+    
+        
